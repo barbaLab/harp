@@ -25,6 +25,7 @@ namespace Bonsai.Harp
 	public class CreateTcpServer : Source<TcpListener>, INamedElement
 	{
         readonly TcpServerConfiguration configuration;
+        const int ExpectedClientsGracePeriod = 250;
         const int MaxConcurrentProbes = 8;
 
         /// <summary>
@@ -117,9 +118,50 @@ namespace Bonsai.Harp
 
 				var cancellation = new CancellationTokenSource();
                 var probeGate = new SemaphoreSlim(MaxConcurrentProbes, MaxConcurrentProbes);
-                Task.Run(() => AcceptClientsAsync(listener, cancellation.Token, probeGate));
+                TcpClientsManager.EnsureConnection(configuration.Name);
+                _ = Task.Run(() => AcceptClientsAsync(listener, cancellation.Token, probeGate));
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        // If there are no expected clients registered (no Device blocks),
+                        // wait a short grace period; if still none, proceed. If a registration
+                        // appears during the timeout, wait for full readiness.
+                        if (!TcpClientsManager.HasExpectedClients(configuration.Name))
+                        {
+                            if (ExpectedClientsGracePeriod > 0)
+                            {
+                                try { await Task.Delay(ExpectedClientsGracePeriod, cancellation.Token).ConfigureAwait(false); }
+                                catch (OperationCanceledException) { return; }
+                            }
 
-                observer.OnNext(listener);
+                            if (!TcpClientsManager.HasExpectedClients(configuration.Name))
+                            {
+                                if (!cancellation.IsCancellationRequested)
+                                {
+                                    WriteLog("No expected clients registered after grace; proceeding.");
+                                    WriteLog("Registered clients: " + TcpClientsManager.GetTcpClients(configuration.Name).Count);
+                                    observer.OnNext(listener);
+                                }
+                                return;
+                            }
+                        }
+
+                        await TcpClientsManager.WaitForConnectionReadyAsync(configuration.Name, cancellation.Token).ConfigureAwait(false);
+                        if (!cancellation.IsCancellationRequested)
+                        {
+                            WriteLog("Registered clients: " + TcpClientsManager.GetTcpClients(configuration.Name).Count);
+                            observer.OnNext(listener);
+                        }
+                    }
+                    catch (OperationCanceledException)
+                    {
+                    }
+                    catch (Exception ex)
+                    {
+                        observer.OnError(ex);
+                    }
+                });
 
 				return Disposable.Create(() =>
 				{
@@ -187,8 +229,8 @@ namespace Bonsai.Harp
                 // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
                 var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
                 var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
-                var registeredClient = TcpClientsManager.RegisterTcpClient(configuration.Name, deviceUid, client);
-                if (!ReferenceEquals(registeredClient, client))
+                await TcpClientsManager.WaitForExpectedTcpClientAsync(configuration.Name, deviceUid, cancellationToken).ConfigureAwait(false);
+                if (!TcpClientsManager.TryAttachTcpClient(configuration.Name, deviceUid, client))
                 {
                     WriteLog("client rejected: " + deviceName + " (" + deviceUid + ") (duplicate Harp device)");
                     return;
@@ -202,7 +244,6 @@ namespace Bonsai.Harp
 
                 registered = true;
                 WriteLog("client connected: " + deviceName + " (" + deviceUid + ") (Harp device)");
-                WriteLog("Registered clients: " + TcpClientsManager.GetTcpClients(configuration.Name).Count);
 
                 _ = Task.Run(() => MonitorClient(client, deviceName, cancellationToken));
             }

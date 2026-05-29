@@ -474,16 +474,11 @@ namespace Bonsai.Harp
             IObserver<HarpMessage> observer,
             CancellationToken cancellationToken)
         {
+            TcpClientsManager.RegisterExpectedTcpClient(connectionName, uid);
+
+            var client = await TcpClientsManager.WaitForTcpClientAsync(connectionName, uid, cancellationToken).ConfigureAwait(false);
+
             ITransport transport;
-            await Task.Delay(1000); // wait for the TcpDeviceProbe to register the client connection
-            // TODO: improve
-            TcpClient client = TcpClientsManager.GetTcpClient(connectionName, uid);
-            if (client == null)
-            {
-                throw new InvalidOperationException(string.Format(
-                    "No TCP client with UID '{0}' is registered for connection '{1}'. Check whether the correct device is connected to the specified TCP server.",
-                    uid, connectionName));
-            }
 
             using (var device = new AsyncDevice(client, leaveOpen: true))
             {
