@@ -475,7 +475,7 @@ namespace Bonsai.Harp
             CancellationToken cancellationToken)
         {
             ITransport transport;
-            await Task.Delay(2000); // wait for the TcpDeviceProbe to register the client connection
+            await Task.Delay(1000); // wait for the TcpDeviceProbe to register the client connection
             // TODO: improve
             TcpClient client = TcpClientsManager.GetTcpClient(connectionName, uid);
             if (client == null)

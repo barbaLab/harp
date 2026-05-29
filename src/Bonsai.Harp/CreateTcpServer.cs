@@ -116,7 +116,8 @@ namespace Bonsai.Harp
                 WriteLog("TCP server started on port " + Port);
 
 				var cancellation = new CancellationTokenSource();
-				Task.Run(() => AcceptClients(listener, cancellation.Token));
+                var probeGate = new SemaphoreSlim(MaxConcurrentProbes, MaxConcurrentProbes);
+                Task.Run(() => AcceptClientsAsync(listener, cancellation.Token, probeGate));
 
                 observer.OnNext(listener);
 
@@ -125,6 +126,7 @@ namespace Bonsai.Harp
 					cancellation.Cancel();
 					listener.Stop();
 					cancellation.Dispose();
+                    probeGate.Dispose();
 
 					Dictionary<string, TcpClient> clients = TcpClientsManager.UnregisterTcpClients(configuration.Name);
 
@@ -140,13 +142,13 @@ namespace Bonsai.Harp
 			});
 		}
 
-        void AcceptClients(TcpListener listener, CancellationToken cancellationToken)
+        async Task AcceptClientsAsync(TcpListener listener, CancellationToken cancellationToken, SemaphoreSlim probeGate)
         {
             while (!cancellationToken.IsCancellationRequested)
             {
                 TcpClient client = null;
 
-                try { client = listener.AcceptTcpClient(); }
+                try { client = await listener.AcceptTcpClientAsync().ConfigureAwait(false); }
                 catch (SocketException) { if (cancellationToken.IsCancellationRequested) break; throw; }
                 catch (ObjectDisposedException) { break; }
 
@@ -155,24 +157,75 @@ namespace Bonsai.Harp
                 // client.SendTimeout = 2000;
                 // client.ReceiveTimeout = 2000;
 
-                var deviceName = TcpDeviceProbe.GetDeviceName(client).GetAwaiter().GetResult();
+                _ = ProbeAndRegisterClientAsync(client, cancellationToken, probeGate);
+            }
+
+        }
+
+        async Task ProbeAndRegisterClientAsync(TcpClient client, CancellationToken cancellationToken, SemaphoreSlim probeGate)
+        {
+            var gateAcquired = false;
+            var registered = false;
+
+            try
+            {
+                await probeGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+                gateAcquired = true;
+
+                var deviceName = await TcpDeviceProbe.GetDeviceName(client).ConfigureAwait(false);
                 if (string.IsNullOrEmpty(deviceName))
                 {
                     WriteLog("client rejected: " + deviceName + " (invalid Harp identity)");
-                    client.Close();
-                    continue;
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    return;
                 }
 
                 // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
                 var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
                 var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
-                TcpClientsManager.RegisterTcpClient(configuration.Name, deviceUid, client);
+                var registeredClient = TcpClientsManager.RegisterTcpClient(configuration.Name, deviceUid, client);
+                if (!ReferenceEquals(registeredClient, client))
+                {
+                    WriteLog("client rejected: " + deviceName + " (" + deviceUid + ") (duplicate Harp device)");
+                    return;
+                }
+
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    TcpClientsManager.UnregisterTcpClient(configuration.Name, deviceUid);
+                    return;
+                }
+
+                registered = true;
                 WriteLog("client connected: " + deviceName + " (" + deviceUid + ") (Harp device)");
                 WriteLog("Registered clients: " + TcpClientsManager.GetTcpClients(configuration.Name).Count);
 
-                Task.Run(() => MonitorClient(client, deviceName, cancellationToken));
+                _ = Task.Run(() => MonitorClient(client, deviceName, cancellationToken));
             }
+            catch (OperationCanceledException)
+            {
+            }
+            catch (Exception ex)
+            {
+                WriteLog("client probe failed: " + ex.Message);
+            }
+            finally
+            {
+                if (gateAcquired)
+                {
+                    probeGate.Release();
+                }
 
+                if (!registered)
+                {
+                    try { client.Close(); } catch { }
+                    try { client.Dispose(); } catch { }
+                }
+            }
         }
 
         async Task MonitorClient(TcpClient client, string deviceName, CancellationToken cancellationToken)

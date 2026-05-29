@@ -86,78 +86,72 @@ namespace Bonsai.Harp.Net
             return server != null;
         }
 
-        static Task ProbeClientAsync(TcpClient client, string connectionName, SemaphoreSlim probeGate)
+        static async Task ProbeClientAsync(TcpClient client, string connectionName, SemaphoreSlim probeGate)
         {
-            return Task.Run(() =>
+            await probeGate.WaitAsync().ConfigureAwait(false);
+            try
             {
-                probeGate.Wait();
-                try
+                var deviceIp = GetRemoteIp(client);
+                var deviceName = await GetDeviceName(client).ConfigureAwait(false);
+                if (!string.IsNullOrEmpty(deviceName) && !string.IsNullOrEmpty(deviceIp))
                 {
-                    var deviceIp = GetRemoteIp(client);
-                    var deviceName = GetDeviceName(client).GetAwaiter().GetResult();
-                    if (!string.IsNullOrEmpty(deviceName) && !string.IsNullOrEmpty(deviceIp))
-                    {
-                        TcpDeviceProbeRegistry.Add(connectionName, deviceName, deviceIp);
-                    }
+                    TcpDeviceProbeRegistry.Add(connectionName, deviceName, deviceIp);
                 }
-                finally
-                {
-                    try { client?.Close(); } catch { }
-                    probeGate.Release();
-                }
-            });
+            }
+            finally
+            {
+                try { client?.Close(); } catch { }
+                probeGate.Release();
+            }
         }
 
-        public static Task<string> GetDeviceName(TcpClient client)
+        public static async Task<string> GetDeviceName(TcpClient client)
         {
-            if (client == null) return Task.FromResult<string>(String.Empty);
+            if (client == null) return string.Empty;
 
-            return Task.Run(() =>
+            var tcs = new TaskCompletionSource<string>();
+            var transport = default(TcpTransport);
+
+            var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
+            var cmdReadDeviceName = HarpCommand.ReadByte(DeviceNameRegister.Address);
+
+            var whoAmI = 0;
+            var messageObserver = Observer.Create<HarpMessage>(
+                message =>
             {
-                var tcs = new TaskCompletionSource<string>();
-                var transport = default(TcpTransport);
-
-                var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
-                var cmdReadDeviceName = HarpCommand.ReadByte(DeviceNameRegister.Address);
-
-                var whoAmI = 0;
-                var messageObserver = Observer.Create<HarpMessage>(
-                    message =>
+                    switch (message.Address)
                     {
-                        switch (message.Address)
-                        {
-                            case WhoAmI.Address:
-                                whoAmI = WhoAmI.GetPayload(message);
-                                if (whoAmI == 0) tcs.TrySetResult(string.Empty);
-                                else transport.Write(cmdReadDeviceName);
-                                break;
-                            case DeviceNameRegister.Address:
-                                var deviceName = nameof(Device);
-                                if (!message.Error) deviceName = DeviceNameRegister.GetPayload(message);
-                                tcs.TrySetResult(deviceName);
-                                break;
-                            default:
-                                break;
-                        }
-                    },
-                    ex => tcs.TrySetException(ex),
-                    () => { if (!tcs.Task.IsCompleted) tcs.TrySetCanceled(); });
+                        case WhoAmI.Address:
+                            whoAmI = WhoAmI.GetPayload(message);
+                            if (whoAmI == 0) tcs.TrySetResult(string.Empty);
+                            else transport.Write(cmdReadDeviceName);
+                            break;
+                        case DeviceNameRegister.Address:
+                            var deviceName = nameof(Device);
+                            if (!message.Error) deviceName = DeviceNameRegister.GetPayload(message);
+                            tcs.TrySetResult(deviceName);
+                            break;
+                        default:
+                            break;
+                    }
+                },
+                ex => tcs.TrySetException(ex),
+                () => { if (!tcs.Task.IsCompleted) tcs.TrySetCanceled(); });
 
-                transport = new TcpTransport(client, messageObserver);
-                transport.IgnoreErrors = true;
+            transport = new TcpTransport(client, messageObserver);
+            transport.IgnoreErrors = true;
 
-                try
-                {
-                    transport.Write(cmdReadWhoAmI);
+            try
+            {
+                transport.Write(cmdReadWhoAmI);
 
-                    var completed = Task.WhenAny(tcs.Task, Task.Delay(ServerTimeoutMilliseconds)).GetAwaiter().GetResult();
-                    if (completed == tcs.Task) return tcs.Task.GetAwaiter().GetResult();
-                }
-                catch { /*ignore*/ }
-                finally { try { transport.Close(); } catch { } }
+                var completed = await Task.WhenAny(tcs.Task, Task.Delay(ServerTimeoutMilliseconds)).ConfigureAwait(false);
+                if (completed == tcs.Task) return await tcs.Task.ConfigureAwait(false);
+            }
+            catch { /*ignore*/ }
+            finally { try { transport.Close(); } catch { } }
 
-                return String.Empty;
-            });
+            return string.Empty;
         }
 
         static string GetRemoteIp(TcpClient client)
