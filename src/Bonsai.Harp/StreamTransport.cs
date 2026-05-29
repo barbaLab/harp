@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Bonsai.Harp
 {
-    class StreamTransport
+    class StreamTransport : IDisposable
     {
         const byte IdMask = 0x03;
         const byte ErrorMask = 0x08;
@@ -23,10 +23,14 @@ namespace Bonsai.Harp
 
         public bool IgnoreErrors { get; set; }
 
-        internal void SetObserver(IObserver<HarpMessage> observer)
+        public void SetObserver(IObserver<HarpMessage> observer)
         {
             this.observer = observer ?? throw new ArgumentNullException(nameof(observer));
         }
+
+        public virtual void Close() { }
+
+        void IDisposable.Dispose() => Close();
 
         static bool CheckType(byte type)
         {
@@ -51,10 +55,10 @@ namespace Bonsai.Harp
             return true;
         }
 
-        internal void PushData(Stream stream, int readBufferSize, int count)
+        internal int PushData(Stream stream, int readBufferSize, int count)
         {
             bufferedStream = bufferedStream ?? new BufferedStream(stream, readBufferSize);
-            bufferedStream.PushBytes(count);
+            return bufferedStream.PushBytes(count);
         }
 
         internal void ReceiveData(Stream stream, int readBufferSize, int bytesToRead)

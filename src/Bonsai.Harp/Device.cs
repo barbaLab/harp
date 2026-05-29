@@ -1,27 +1,49 @@
-﻿using System;
+﻿using Bonsai.Harp.Net;
+using System;
 using System.ComponentModel;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
+using System.IO;
+using System.Net.Sockets;
 using System.Reactive;
 using System.Reactive.Concurrency;
-using System.Xml.Serialization;
-using System.Threading.Tasks;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
-using System.IO;
 using Semver;
+using System.Threading.Tasks;
+using System.Xml.Serialization;
+using DeviceNameRegister = Bonsai.Harp.DeviceName;
 
 namespace Bonsai.Harp
 {
     /// <summary>
+    /// Represents the transport used to communicate with the Harp device.
+    /// </summary>
+    public enum TransportMode
+    {
+        /// <summary>
+        /// Uses a serial port connection.
+        /// </summary>
+        Serial = 0,
+        /// <summary>
+        /// Uses a TCP connection.
+        /// </summary>
+        Tcp = 1
+    }
+
+    /// <summary>
     /// Represents an observable source of messages from the Harp device connected at the specified serial port.
     /// </summary>
     [XmlType(Namespace = Constants.XmlNamespace)]
+    [TypeDescriptionProvider(typeof(DeviceTransportTypeDescriptionProvider))]
     [Editor("Bonsai.Harp.Design.DeviceConfigurationEditor, Bonsai.Harp.Design", typeof(ComponentEditor))]
-    [Description("Produces a sequence of messages from the Harp device connected at the specified serial port.")]
+    [Description("Produces a sequence of messages from the Harp device connected at the specified serial port or TCP connection.")]
     public partial class Device : Source<HarpMessage>, INamedElement
     {
         string name;
+        string uid;
         string portName;
+        string connectionName;
+        string deviceName;
         readonly int deviceId;
         readonly FirmwareMetadata deviceFirmware;
 
@@ -60,6 +82,7 @@ namespace Bonsai.Harp
                     nameof(whoAmI));
             }
 
+            TransportMode = TransportMode.Serial;
             portName = "COMx";
             OperationMode = OperationMode.Active;
             OperationLed = LedState.On;
@@ -68,6 +91,13 @@ namespace Bonsai.Harp
             Heartbeat = EnableFlag.Disabled;
             MuteReplies = false;
         }
+
+        /// <summary>
+        /// Gets or sets a value specifying the transport mode of the device at initialization.
+        /// </summary>
+        [Description("Specifies the transport used to communicate with the Harp device.")]
+        [RefreshProperties(RefreshProperties.All)]
+        public TransportMode TransportMode { get; set; }
 
         /// <summary>
         /// Gets or sets a value specifying the operation mode of the device at initialization.
@@ -161,6 +191,7 @@ namespace Bonsai.Harp
         /// <summary>
         /// Gets or sets the name of the serial port used to communicate with the Harp device.
         /// </summary>
+        [Category("Connectivity")]
         [TypeConverter(typeof(PortNameConverter))]
         [Description("The name of the serial port used to communicate with the Harp device.")]
         public string PortName
@@ -169,13 +200,84 @@ namespace Bonsai.Harp
             set
             {
                 portName = value;
-                if (deviceId == 0)
+                if (TransportMode == TransportMode.Serial && deviceId == 0)
                 {
                     GetDeviceName(portName, LedState, VisualIndicators, Heartbeat).Subscribe(deviceName => name = deviceName);
                 }
             }
         }
 
+        /// <summary>
+        /// Gets or sets the name of the TCP connection used to communicate with the Harp device.
+        /// </summary>
+        [Category("Connectivity")]
+        [TypeConverter(typeof(ConnectionNameConverter))]
+        [RefreshProperties(RefreshProperties.All)]
+        [Description("The name of the TCP connection used to communicate with the Harp device.")]
+        public string ConnectionName
+        {
+            get { return connectionName; }
+            set { connectionName = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the name of the Harp device to select when using TCP.
+        /// </summary>
+        [XmlIgnore]
+        [Category("Connectivity")]
+        [TypeConverter(typeof(DeviceNameConverter))]
+        [Description("The name of the Harp device to select when using TCP.")]
+        public string DeviceName
+        {
+            get { return deviceName; }
+            set
+            {
+                deviceName = !string.IsNullOrEmpty(value) ? value.Substring(0, value.LastIndexOf('(')).TrimEnd() : null;
+                name = !string.IsNullOrEmpty(value) ? deviceName : nameof(Device);
+                // uid = !string.IsNullOrEmpty(value) ? value.Substring(value.LastIndexOf('(') + 1, value.LastIndexOf(')') - value.LastIndexOf('(') - 1).Trim() : null;
+                // FIXME
+                uid = name;
+            }
+        }
+
+        /// <summary>
+        /// Gets or sets the name of the Harp device to select when using TCP. It is always without the client UID appended.
+        /// </summary>
+        [XmlElement("DeviceName")]
+        [Browsable(false)]
+        [EditorBrowsable(EditorBrowsableState.Never)]
+        public string DeviceNameSerialized
+        {
+            get { return deviceName; }
+            set { deviceName = value; }
+        }
+
+        /// <summary>
+        /// Gets or sets the unique identifier (uid) of the Harp device.
+        /// </summary>
+        [XmlElement("Uid")]
+        [Category("Connectivity")]
+        [ReadOnly(true)]
+        [Description("The unique identifier (uid) of the Harp device.")]
+        public string Uid
+        {
+            get { return uid; }
+            set { uid = value; }
+        }
+
+        string INamedElement.Name => !string.IsNullOrEmpty(name) ? name : !string.IsNullOrEmpty(deviceName) ? deviceName : default;
+
+        OperationControlPayload CreateOperationControlPayload() => new(
+            OperationMode,
+            DumpRegisters,
+            MuteReplies,
+            VisualIndicators,
+            OperationLed,
+            Heartbeat
+        );
+
+        // TODO: consider moving GetDeviceName for serial connections,
+        // overloading GetDeviceName for both serial and TCP
         static IObservable<string> GetDeviceName(string portName, LedState ledState, LedState visualIndicators, EnableFlag heartbeat)
         {
             return Observable.Create<string>(observer =>
@@ -190,7 +292,7 @@ namespace Bonsai.Harp
                     heartbeat));
                 var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
                 var cmdReadVersion = HarpCommand.ReadByte(Version.Address);
-                var cmdReadDeviceName = HarpCommand.ReadByte(DeviceName.Address);
+                var cmdReadDeviceName = HarpCommand.ReadByte(DeviceNameRegister.Address);
                 var cmdReadSerialNumber = HarpCommand.ReadUInt16(SerialNumber.Address);
 
                 var whoAmI = 0;
@@ -217,9 +319,9 @@ namespace Bonsai.Harp
                                 break;
                             case TimestampSeconds.Address: timestamp = TimestampSeconds.GetPayload(message); break;
                             case SerialNumber.Address: if (!message.Error) serialNumber = SerialNumber.GetPayload(message); break;
-                            case DeviceName.Address:
+                            case DeviceNameRegister.Address:
                                 var deviceName = nameof(Device);
-                                if (!message.Error) deviceName = DeviceName.GetPayload(message);
+                                if (!message.Error) deviceName = DeviceNameRegister.GetPayload(message);
                                 Console.WriteLine("Serial Harp device.");
                                 if (!serialNumber.HasValue) Console.WriteLine($"WhoAmI: {whoAmI}");
                                 else Console.WriteLine($"WhoAmI: {whoAmI}-{serialNumber:x4}");
@@ -248,22 +350,6 @@ namespace Bonsai.Harp
               .FirstAsync();
         }
 
-        private void CloseTransport(SerialTransport transport, OperationControlPayload controlPayload)
-        {
-            try
-            {
-                controlPayload.OperationMode = OperationMode.Standby;
-                controlPayload.DumpRegisters = false;
-                var writeOpCtrl = OperationControl.FromPayload(MessageType.Write, controlPayload);
-                transport.Write(writeOpCtrl);
-            }
-            catch (Exception ex) when (ex is IOException || ex is InvalidOperationException || ex is ObjectDisposedException)
-            {
-                // ignore port IO errors
-            }
-            finally { transport.Close(); }
-        }
-
         /// <summary>
         /// Connects to the specified serial port and returns an observable sequence of Harp messages
         /// coming from the device.
@@ -272,11 +358,12 @@ namespace Bonsai.Harp
         public override IObservable<HarpMessage> Generate()
         {
             var portName = PortName;
+            var connectionName = ConnectionName;
             var ignoreErrors = IgnoreErrors;
             var controlPayload = CreateOperationControlPayload();
             return Observable.Create<HarpMessage>(async (observer, cancellationToken) =>
             {
-                var transport = await CreateTransportAsync(portName, ignoreErrors, controlPayload, observer, cancellationToken);
+                var transport = await CreateTransportAsync(portName, connectionName, ignoreErrors, controlPayload, observer, cancellationToken);
                 return Disposable.Create(() => CloseTransport(transport, controlPayload));
             });
         }
@@ -290,11 +377,12 @@ namespace Bonsai.Harp
         public IObservable<HarpMessage> Generate(IObservable<HarpMessage> source)
         {
             var portName = PortName;
+            var connectionName = ConnectionName;
             var ignoreErrors = IgnoreErrors;
             var controlPayload = CreateOperationControlPayload();
             return Observable.Create<HarpMessage>(async (observer, cancellationToken) =>
             {
-                var transport = await CreateTransportAsync(portName, ignoreErrors, controlPayload, observer, cancellationToken);
+                var transport = await CreateTransportAsync(portName, connectionName, ignoreErrors, controlPayload, observer, cancellationToken);
                 var sourceDisposable = new SingleAssignmentDisposable();
                 sourceDisposable.Disposable = source.Subscribe(
                     transport.Write,
@@ -309,25 +397,27 @@ namespace Bonsai.Harp
             });
         }
 
-        string INamedElement.Name => !string.IsNullOrEmpty(name) ? name : default;
+        async Task<ITransport> CreateTransportAsync(
+            string portName,
+            string connectionName,
+            bool ignoreErrors,
+            OperationControlPayload controlPayload,
+            IObserver<HarpMessage> observer,
+            CancellationToken cancellationToken)
+        {
+            return TransportMode == TransportMode.Tcp
+                ? await CreateTcpTransportAsync(connectionName, ignoreErrors, controlPayload, observer, cancellationToken)
+                : await CreateSerialTransportAsync(portName, ignoreErrors, controlPayload, observer, cancellationToken);
+        }
 
-        OperationControlPayload CreateOperationControlPayload() => new(
-                OperationMode,
-                DumpRegisters,
-                MuteReplies,
-                VisualIndicators,
-                OperationLed,
-                Heartbeat
-        );
-
-        async Task<SerialTransport> CreateTransportAsync(
+        async Task<ITransport> CreateSerialTransportAsync(
             string portName,
             bool ignoreErrors,
             OperationControlPayload controlPayload,
             IObserver<HarpMessage> observer,
             CancellationToken cancellationToken)
         {
-            SerialTransport transport;
+            ITransport transport;
             using (var device = new AsyncDevice(portName, leaveOpen: true))
             {
                 try
@@ -377,6 +467,92 @@ namespace Bonsai.Harp
             var writeOpCtrl = OperationControl.FromPayload(MessageType.Write, controlPayload);
             transport.Write(writeOpCtrl);
             return transport;
+        }
+
+        async Task<ITransport> CreateTcpTransportAsync(
+            string connectionName,
+            bool ignoreErrors,
+            OperationControlPayload controlPayload,
+            IObserver<HarpMessage> observer,
+            CancellationToken cancellationToken)
+        {
+            ITransport transport;
+            await Task.Delay(2000); // wait for the TcpDeviceProbe to register the client connection
+            // TODO: improve
+            TcpClient client = TcpClientsManager.GetTcpClient(connectionName, uid);
+            if (client == null)
+            {
+                throw new InvalidOperationException(string.Format(
+                    "No TCP client with UID '{0}' is registered for connection '{1}'. Check whether the correct device is connected to the specified TCP server.",
+                    uid, connectionName));
+            }
+
+            using (var device = new AsyncDevice(client, leaveOpen: true))
+            {
+                // FIXME: does not work!
+                // try
+                // {
+                //     var whoAmI = await device.ReadWhoAmIAsync(cancellationToken);
+                //     if (deviceId > 0 && whoAmI != deviceId)
+                //     {
+                //         throw new HarpException(string.Format(
+                //             "The device ID {1} on {0} was unexpected. Check whether the correct device is connected to the specified TCP server.",
+                //             connectionName, whoAmI));
+                //     }
+
+                //     if (deviceFirmware != null)
+                //     {
+                //         var firmwareVersion = await device.ReadFirmwareVersionAsync(cancellationToken);
+                //         if (firmwareVersion != deviceFirmware.FirmwareVersion)
+                //         {
+                //             throw new HarpException(string.Format(
+                //                 "The device firmware version was unexpected. Expected version {0} and device reported {1}.",
+                //                 deviceFirmware.FirmwareVersion, firmwareVersion));
+                //         }
+                //     }
+                // }
+                // catch (OperationCanceledException)
+                // {
+                //     device.Transport.Close();
+                //     throw;
+                // }
+
+                transport = device.Transport;
+                transport.IgnoreErrors = ignoreErrors;
+                transport.SetObserver(Observer.Create<HarpMessage>(
+                    message =>
+                    {
+                        if (message.Address != OperationControl.Address)
+                        {
+                            Console.Error.WriteLine("Unexpected Harp data frame before operation control: {0}.", message);
+                            return;
+                        }
+
+                        transport.SetObserver(observer);
+                    },
+                    observer.OnError,
+                    observer.OnCompleted));
+            }
+
+            var writeOpCtrl = OperationControl.FromPayload(MessageType.Write, controlPayload);
+            transport.Write(writeOpCtrl);
+            return transport;
+        }
+
+        private void CloseTransport(ITransport transport, OperationControlPayload controlPayload)
+        {
+            try
+            {
+                controlPayload.OperationMode = OperationMode.Standby;
+                controlPayload.DumpRegisters = false;
+                var writeOpCtrl = OperationControl.FromPayload(MessageType.Write, controlPayload);
+                transport.Write(writeOpCtrl);
+            }
+            catch (Exception ex) when (ex is IOException || ex is InvalidOperationException || ex is ObjectDisposedException || ex is SocketException)
+            {
+                // ignore port IO errors
+            }
+            finally { transport.Close(); }
         }
     }
 }

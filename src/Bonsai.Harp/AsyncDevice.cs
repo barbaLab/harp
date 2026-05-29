@@ -1,8 +1,10 @@
-﻿using System;
+﻿using Bonsai.Harp.Net;
+using System;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 
 namespace Bonsai.Harp
 {
@@ -12,7 +14,7 @@ namespace Bonsai.Harp
     public class AsyncDevice : IDisposable
     {
         readonly bool _leaveOpen;
-        readonly SerialTransport transport;
+        readonly ITransport transport;
         readonly Subject<HarpMessage> response;
 
         /// <summary>
@@ -26,13 +28,30 @@ namespace Bonsai.Harp
             transport = new SerialTransport(portName, response);
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="AsyncDevice"/> class on
+        /// the specified Tcp client.
+        /// </summary>
+        /// <param name="client">The TcpClient used to communicate with the Harp device.</param>
+        public AsyncDevice(TcpClient client)
+        {
+            response = new Subject<HarpMessage>();
+            transport = new TcpTransport(client, response);
+        }
+
         internal AsyncDevice(string portName, bool leaveOpen)
             : this(portName)
         {
             _leaveOpen = leaveOpen;
         }
 
-        internal SerialTransport Transport
+        internal AsyncDevice(TcpClient client, bool leaveOpen)
+            : this(client)
+        {
+            _leaveOpen = leaveOpen;
+        }
+
+        internal ITransport Transport
         {
             get { return transport; }
         }
