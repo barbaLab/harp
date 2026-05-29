@@ -228,7 +228,7 @@ namespace Bonsai.Harp
 
                 // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
                 var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                var deviceUid = TcpDeviceProbe.CreateClientKey(configuration.Name, deviceIp, deviceName);
                 await TcpClientsManager.WaitForExpectedTcpClientAsync(configuration.Name, deviceUid, cancellationToken).ConfigureAwait(false);
                 if (!TcpClientsManager.TryAttachTcpClient(configuration.Name, deviceUid, client))
                 {
@@ -288,7 +288,7 @@ namespace Bonsai.Harp
                 {
                     // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
                     var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                    var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                    var deviceUid = TcpDeviceProbe.CreateClientKey(configuration.Name, deviceIp, deviceName);
                     TcpClientsManager.UnregisterTcpClient(configuration.Name, deviceUid);
                     WriteLog("client disconnected: " + deviceName + " (" + deviceUid + ")");
                     client.Dispose();

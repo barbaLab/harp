@@ -26,9 +26,7 @@ namespace Bonsai.Harp.Net
 			var device = GetDevice(context == null ? null : context.Instance);
 			if (device != null && !string.IsNullOrEmpty(device.ConnectionName))
 			{
-                TcpDeviceProbeRegistry.Clear(device.ConnectionName);
-                TcpDeviceProbe.TryGetTcpDevices(context, device.ConnectionName);
-				var deviceNames = TcpDeviceProbeRegistry.GetDeviceNames(device.ConnectionName);
+                var deviceNames = TcpDeviceProbe.TryGetTcpDevices(context, device.ConnectionName);
 
                 if (deviceNames.Length > 0)
 				{

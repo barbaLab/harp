@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Reactive;
@@ -18,17 +19,18 @@ namespace Bonsai.Harp.Net
         const int ServerTimeoutMilliseconds = 1000;
         const int MaxConcurrentProbes = 8;
 
-        public static void TryGetTcpDevices(ITypeDescriptorContext context, string connectionName)
+        public static string[] TryGetTcpDevices(ITypeDescriptorContext context, string connectionName)
         {
-            if (context == null || string.IsNullOrEmpty(connectionName)) return;
+            if (context == null || string.IsNullOrEmpty(connectionName)) return Array.Empty<string>();
 
             CreateTcpServer server;
-            if (!TryGetServer(context, connectionName, out server)) return;
-            if (server == null || server.Port <= 0) return;
+            if (!TryGetServer(context, connectionName, out server)) return Array.Empty<string>();
+            if (server == null || server.Port <= 0) return Array.Empty<string>();
 
             TcpListener listener = null;
             TcpClient client = null;
             var probeTasks = new List<Task>();
+            var deviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var probeGate = new SemaphoreSlim(MaxConcurrentProbes, MaxConcurrentProbes);
 
             try
@@ -50,7 +52,7 @@ namespace Bonsai.Harp.Net
                     client.SendTimeout = ServerTimeoutMilliseconds;
                     client.ReceiveTimeout = ServerTimeoutMilliseconds;
 
-                    probeTasks.Add(ProbeClientAsync(client, connectionName, probeGate));
+                    probeTasks.Add(ProbeClientAsync(client, connectionName, probeGate, deviceNames));
                     client = null;
                 }
 
@@ -58,10 +60,18 @@ namespace Bonsai.Harp.Net
                 {
                     Task.WaitAll(probeTasks.ToArray());
                 }
+
+                if (deviceNames.Count == 0) return Array.Empty<string>();
+
+                var result = new string[deviceNames.Count];
+                deviceNames.CopyTo(result);
+                Array.Sort(result, StringComparer.OrdinalIgnoreCase);
+                return result;
             }
             catch
             {
                 // Ignore any exceptions that may occur during the design-time Harp devices probe.
+                return Array.Empty<string>();
             }
             finally
             {
@@ -86,22 +96,34 @@ namespace Bonsai.Harp.Net
             return server != null;
         }
 
-        static async Task ProbeClientAsync(TcpClient client, string connectionName, SemaphoreSlim probeGate)
+        static async Task ProbeClientAsync(TcpClient client, string connectionName, SemaphoreSlim probeGate, HashSet<string> deviceNames)
         {
             await probeGate.WaitAsync().ConfigureAwait(false);
             try
             {
-                var deviceIp = GetRemoteIp(client);
                 var deviceName = await GetDeviceName(client).ConfigureAwait(false);
-                if (!string.IsNullOrEmpty(deviceName) && !string.IsNullOrEmpty(deviceIp))
+                if (!string.IsNullOrEmpty(deviceName))
                 {
-                    TcpDeviceProbeRegistry.Add(connectionName, deviceName, deviceIp);
+                    var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                    deviceName = $"{deviceName} ({CreateClientKey(connectionName, deviceIp, deviceName)})";
+                    deviceNames.Add(deviceName);
                 }
             }
             finally
             {
                 try { client?.Close(); } catch { }
                 probeGate.Release();
+            }
+        }
+
+        public static string CreateClientKey(string connectionName, string deviceIp, string deviceName)
+        {
+            var keySource = string.Concat(connectionName ?? string.Empty, "|", deviceIp ?? string.Empty, "|", deviceName ?? string.Empty);
+            using (var sha256 = SHA256.Create())
+            {
+                var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(keySource));
+                var hex = BitConverter.ToString(hash).Replace("-", string.Empty);
+                return hex.Length > 8 ? hex.Substring(0, 8) : hex;
             }
         }
 
@@ -154,20 +176,5 @@ namespace Bonsai.Harp.Net
             return string.Empty;
         }
 
-        static string GetRemoteIp(TcpClient client)
-        {
-            try
-            {
-                if (client != null && client.Client.RemoteEndPoint is IPEndPoint endpoint)
-                {
-                    return endpoint.Address.ToString();
-                }
-            }
-            catch
-            {
-            }
-
-            return string.Empty;
-        }
     }
 }
