@@ -162,9 +162,12 @@ namespace Bonsai.Harp
                     client.Close();
                     continue;
                 }
-                WriteLog("client connected: " + deviceName + " (Harp device)");
 
-                TcpClientsManager.RegisterTcpClient(configuration.Name, deviceName, client);
+                // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
+                var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                TcpClientsManager.RegisterTcpClient(configuration.Name, deviceUid, client);
+                WriteLog("client connected: " + deviceName + " (" + deviceUid + ") (Harp device)");
                 WriteLog("Registered clients: " + TcpClientsManager.GetTcpClients(configuration.Name).Count);
 
                 Task.Run(() => MonitorClient(client, deviceName, cancellationToken));
@@ -189,8 +192,11 @@ namespace Bonsai.Harp
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    WriteLog("client disconnected: " + deviceName);
-                    TcpClientsManager.UnregisterTcpClient(configuration.Name, deviceName);
+                    // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
+                    var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
+                    var deviceUid = TcpDeviceProbeRegistry.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                    TcpClientsManager.UnregisterTcpClient(configuration.Name, deviceUid);
+                    WriteLog("client disconnected: " + deviceName + " (" + deviceUid + ")");
                     client.Dispose();
                 }
             }

@@ -234,9 +234,7 @@ namespace Bonsai.Harp
             {
                 deviceName = !string.IsNullOrEmpty(value) ? value.Substring(0, value.LastIndexOf('(')).TrimEnd() : null;
                 name = !string.IsNullOrEmpty(value) ? deviceName : nameof(Device);
-                // uid = !string.IsNullOrEmpty(value) ? value.Substring(value.LastIndexOf('(') + 1, value.LastIndexOf(')') - value.LastIndexOf('(') - 1).Trim() : null;
-                // FIXME
-                uid = name;
+                uid = !string.IsNullOrEmpty(value) ? value.Substring(value.LastIndexOf('(') + 1, value.LastIndexOf(')') - value.LastIndexOf('(') - 1).Trim() : null;
             }
         }
 

@@ -79,7 +79,7 @@ namespace Bonsai.Harp.Net
 		}
 
         // FIXME: retrieve Harp uid
-		static string CreateClientKey(string connectionName, string deviceIp, string deviceName)
+		public static string CreateClientKey(string connectionName, string deviceIp, string deviceName)
 		{
 			var keySource = string.Concat(connectionName ?? string.Empty, "|", deviceIp ?? string.Empty, "|", deviceName ?? string.Empty);
 			using (var sha256 = SHA256.Create())
