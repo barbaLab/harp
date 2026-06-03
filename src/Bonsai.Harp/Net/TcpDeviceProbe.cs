@@ -14,7 +14,7 @@ using DeviceNameRegister = Bonsai.Harp.DeviceName;
 
 namespace Bonsai.Harp.Net
 {
-    static class TcpDeviceProbe
+    public static class TcpDeviceProbe
     {
         const int ServerTimeoutMilliseconds = 1000;
         const int MaxConcurrentProbes = 8;

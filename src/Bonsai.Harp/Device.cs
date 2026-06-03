@@ -234,16 +234,26 @@ namespace Bonsai.Harp
         /// </summary>
         [XmlIgnore]
         [Category("Connectivity")]
-        [TypeConverter(typeof(DeviceNameConverter))]
+        [Editor("Bonsai.Harp.Design.DeviceNameEditor, Bonsai.Harp.Design", DesignTypes.UITypeEditor)]
         [Description("The name of the Harp device to select when using TCP.")]
         public string DeviceName
         {
             get { return deviceName; }
             set
             {
-                deviceName = !string.IsNullOrEmpty(value) ? value.Substring(0, value.LastIndexOf('(')).TrimEnd() : null;
-                name = !string.IsNullOrEmpty(value) ? deviceName : nameof(Device);
-                uid = !string.IsNullOrEmpty(value) ? value.Substring(value.LastIndexOf('(') + 1, value.LastIndexOf(')') - value.LastIndexOf('(') - 1).Trim() : null;
+                if (string.IsNullOrEmpty(value))
+                {
+                    deviceName = null;
+                    name = nameof(Device);
+                    uid = null;
+                    return;
+                }
+
+                var openParen = value.LastIndexOf('(');
+                var closeParen = value.LastIndexOf(')');
+                deviceName = openParen > 0 ? value.Substring(0, openParen).TrimEnd() : value;
+                name = !string.IsNullOrEmpty(deviceName) ? deviceName : nameof(Device);
+                uid = openParen >= 0 && closeParen > openParen ? value.Substring(openParen + 1, closeParen - openParen - 1).Trim() : null;
             }
         }
 
