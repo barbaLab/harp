@@ -24,6 +24,7 @@ namespace Bonsai.Harp.Net
             writeLock = new object();
             tcpClient = client;
             tcpClient.NoDelay = true;
+            tcpClient.ReceiveBufferSize = DefaultReadBufferSize;
             networkStream = tcpClient.GetStream();
             networkStream.ReadTimeout = Timeout.Infinite;
             RunAsync(taskCancellation.Token);
@@ -33,7 +34,6 @@ namespace Bonsai.Harp.Net
         {
             return Task.Factory.StartNew(() =>
             {
-                // using var cancellation = cancellationToken.Register(tcpClient.Dispose);
                 while (!cancellationToken.IsCancellationRequested)
                 {
                     try
