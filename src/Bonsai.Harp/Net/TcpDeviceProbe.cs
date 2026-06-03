@@ -116,6 +116,16 @@ namespace Bonsai.Harp.Net
             }
         }
 
+        public static async Task<string> GetDeviceName(TcpClient client)
+        {
+            if (client == null) return string.Empty;
+
+            var transport = new TcpTransport(client, new Subject<HarpMessage>());
+            transport.IgnoreErrors = true;
+
+            return await DeviceProbe.GetDeviceName(transport).ConfigureAwait(false);
+        }
+
         public static string CreateClientKey(string connectionName, string deviceIp, string deviceName)
         {
             var keySource = string.Concat(connectionName ?? string.Empty, "|", deviceIp ?? string.Empty, "|", deviceName ?? string.Empty);
@@ -126,55 +136,5 @@ namespace Bonsai.Harp.Net
                 return hex.Length > 8 ? hex.Substring(0, 8) : hex;
             }
         }
-
-        public static async Task<string> GetDeviceName(TcpClient client)
-        {
-            if (client == null) return string.Empty;
-
-            var tcs = new TaskCompletionSource<string>();
-            var transport = default(TcpTransport);
-
-            var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
-            var cmdReadDeviceName = HarpCommand.ReadByte(DeviceNameRegister.Address);
-
-            var whoAmI = 0;
-            var messageObserver = Observer.Create<HarpMessage>(
-                message =>
-            {
-                    switch (message.Address)
-                    {
-                        case WhoAmI.Address:
-                            whoAmI = WhoAmI.GetPayload(message);
-                            if (whoAmI == 0) tcs.TrySetResult(string.Empty);
-                            else transport.Write(cmdReadDeviceName);
-                            break;
-                        case DeviceNameRegister.Address:
-                            var deviceName = nameof(Device);
-                            if (!message.Error) deviceName = DeviceNameRegister.GetPayload(message);
-                            tcs.TrySetResult(deviceName);
-                            break;
-                        default:
-                            break;
-                    }
-                },
-                ex => tcs.TrySetException(ex),
-                () => { if (!tcs.Task.IsCompleted) tcs.TrySetCanceled(); });
-
-            transport = new TcpTransport(client, messageObserver);
-            transport.IgnoreErrors = true;
-
-            try
-            {
-                transport.Write(cmdReadWhoAmI);
-
-                var completed = await Task.WhenAny(tcs.Task, Task.Delay(ServerTimeoutMilliseconds)).ConfigureAwait(false);
-                if (completed == tcs.Task) return await tcs.Task.ConfigureAwait(false);
-            }
-            catch { /*ignore*/ }
-            finally { try { transport.Close(); } catch { } }
-
-            return string.Empty;
-        }
-
     }
 }

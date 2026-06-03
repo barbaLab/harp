@@ -4,14 +4,12 @@ using System.ComponentModel;
 using System.IO;
 using System.Net.Sockets;
 using System.Reactive;
-using System.Reactive.Concurrency;
 using System.Reactive.Disposables;
 using System.Reactive.Linq;
+using System.Reactive.Subjects;
 using System.Threading;
-using Semver;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
-using DeviceNameRegister = Bonsai.Harp.DeviceName;
 
 namespace Bonsai.Harp
 {
@@ -202,7 +200,18 @@ namespace Bonsai.Harp
                 portName = value;
                 if (TransportMode == TransportMode.Serial && deviceId == 0)
                 {
-                    GetDeviceName(portName, LedState, VisualIndicators, Heartbeat).Subscribe(deviceName => name = deviceName);
+                    var deviceName = nameof(Device);
+                    try
+                    {
+                        var transport = new SerialTransport(portName, new Subject<HarpMessage>());
+                        transport.IgnoreErrors = true;
+                        deviceName = DeviceProbe.GetDeviceName(transport).GetAwaiter().GetResult();
+                    }
+                    catch { /*ignore*/ }
+                    finally
+                    {
+                        this.deviceName = deviceName;
+                    }
                 }
             }
         }
@@ -273,80 +282,6 @@ namespace Bonsai.Harp
             OperationLed,
             Heartbeat
         );
-
-        // TODO: consider moving GetDeviceName for serial connections,
-        // overloading GetDeviceName for both serial and TCP
-        static IObservable<string> GetDeviceName(string portName, LedState ledState, LedState visualIndicators, EnableFlag heartbeat)
-        {
-            return Observable.Create<string>(observer =>
-            {
-                var transport = default(SerialTransport);
-                var writeOpCtrl = OperationControl.FromPayload(MessageType.Write, new OperationControlPayload(
-                    OperationMode.Standby,
-                    dumpRegisters: false,
-                    muteReplies: false,
-                    ledState,
-                    visualIndicators,
-                    heartbeat));
-                var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
-                var cmdReadVersion = HarpCommand.ReadByte(Version.Address);
-                var cmdReadDeviceName = HarpCommand.ReadByte(DeviceNameRegister.Address);
-                var cmdReadSerialNumber = HarpCommand.ReadUInt16(SerialNumber.Address);
-
-                var whoAmI = 0;
-                var timestamp = 0u;
-                var hardwareVersion = default(SemVersion);
-                var firmwareVersion = default(SemVersion);
-                var serialNumber = default(ushort?);
-                var messageObserver = Observer.Create<HarpMessage>(
-                    message =>
-                    {
-                        switch (message.Address)
-                        {
-                            case OperationControl.Address:
-                                transport.Write(cmdReadWhoAmI);
-                                transport.Write(cmdReadVersion);
-                                transport.Write(cmdReadSerialNumber);
-                                transport.Write(cmdReadDeviceName);
-                                break;
-                            case WhoAmI.Address: whoAmI = WhoAmI.GetPayload(message); break;
-                            case Version.Address:
-                                var version = Version.GetPayload(message);
-                                hardwareVersion = version.HardwareVersion;
-                                firmwareVersion = version.FirmwareVersion;
-                                break;
-                            case TimestampSeconds.Address: timestamp = TimestampSeconds.GetPayload(message); break;
-                            case SerialNumber.Address: if (!message.Error) serialNumber = SerialNumber.GetPayload(message); break;
-                            case DeviceNameRegister.Address:
-                                var deviceName = nameof(Device);
-                                if (!message.Error) deviceName = DeviceNameRegister.GetPayload(message);
-                                Console.WriteLine("Serial Harp device.");
-                                if (!serialNumber.HasValue) Console.WriteLine($"WhoAmI: {whoAmI}");
-                                else Console.WriteLine($"WhoAmI: {whoAmI}-{serialNumber:x4}");
-                                Console.WriteLine($"Hw: {hardwareVersion?.ToString() ?? "unknown"}");
-                                Console.WriteLine($"Fw: {firmwareVersion?.ToString() ?? "unknown"}");
-                                Console.WriteLine($"Timestamp (s): {timestamp}");
-                                Console.WriteLine($"DeviceName: {deviceName}");
-                                Console.WriteLine();
-                                observer.OnNext(deviceName);
-                                observer.OnCompleted();
-                                break;
-                            default:
-                                break;
-                        }
-                    },
-                    observer.OnError,
-                    observer.OnCompleted);
-                transport = new SerialTransport(portName, messageObserver);
-                transport.IgnoreErrors = true;
-
-                transport.Write(writeOpCtrl);
-                return transport;
-            }).Timeout(TimeSpan.FromMilliseconds(500))
-              .OnErrorResumeNext(Observable.Return(nameof(Device)))
-              .SubscribeOn(Scheduler.Default)
-              .FirstAsync();
-        }
 
         /// <summary>
         /// Connects to the specified serial port and returns an observable sequence of Harp messages
