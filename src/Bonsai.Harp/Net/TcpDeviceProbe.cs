@@ -52,7 +52,7 @@ namespace Bonsai.Harp.Net
                     client.SendTimeout = ServerTimeoutMilliseconds;
                     client.ReceiveTimeout = ServerTimeoutMilliseconds;
 
-                    probeTasks.Add(ProbeClientAsync(client, connectionName, probeGate, deviceNames));
+                    probeTasks.Add(ProbeClientAsync(client, probeGate, deviceNames));
                     client = null;
                 }
 
@@ -96,7 +96,7 @@ namespace Bonsai.Harp.Net
             return server != null;
         }
 
-        static async Task ProbeClientAsync(TcpClient client, string connectionName, SemaphoreSlim probeGate, HashSet<string> deviceNames)
+        static async Task ProbeClientAsync(TcpClient client, SemaphoreSlim probeGate, HashSet<string> deviceNames)
         {
             await probeGate.WaitAsync().ConfigureAwait(false);
             try
