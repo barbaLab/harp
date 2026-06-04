@@ -5,12 +5,9 @@ using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Reactive;
 using System.Reactive.Subjects;
-using DeviceNameRegister = Bonsai.Harp.DeviceName;
 
 namespace Bonsai.Harp.Net
 {

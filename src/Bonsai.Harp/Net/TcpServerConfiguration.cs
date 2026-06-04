@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Bonsai.Harp.Net
+﻿namespace Bonsai.Harp.Net
 {
     /// <summary>
     /// Provides settings for creating and configuring a Harp communication server
