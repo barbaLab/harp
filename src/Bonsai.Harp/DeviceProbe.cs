@@ -6,8 +6,20 @@ using System.Security.Cryptography;
 
 namespace Bonsai.Harp
 {
+    /// <summary>
+    /// Provides methods to probe connected Harp devices and retrieve their names and unique identifiers.
+    /// </summary>
     public static class DeviceProbe
     {
+        /// <summary>
+        /// Asynchronously probes the specified transport for a connected Harp device and retrieves its name.
+        /// </summary>
+        /// <param name="transport">The transport to probe for a Harp device.</param>
+        /// <param name="leaveOpen">Whether to leave the transport open after probing.</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation.
+        /// The task result contains the name of the connected Harp device, or an empty string if no device was found.
+        /// </returns>
         public static async Task<string> GetDeviceName(ITransport transport, bool leaveOpen = false)
         {
             var tcs = new TaskCompletionSource<string>();
@@ -95,6 +107,15 @@ namespace Bonsai.Harp
             return string.Empty;
         }
 
+        /// <summary>
+        /// Asynchronously probes the specified transport for a connected Harp device and retrieves its unique identifier.
+        /// </summary>
+        /// <param name="transport">The transport to probe for a Harp device.</param>
+        /// <param name="leaveOpen">Whether to leave the transport open after probing.</param>
+        /// <returns>
+        /// A task that represents the asynchronous operation.
+        /// The task result contains the unique identifier of the connected Harp device, or an empty string if no device was found.
+        /// </returns>
         public static async Task<string> GetUid(ITransport transport, bool leaveOpen = false)
         {
             var tcs = new TaskCompletionSource<string>();
@@ -153,6 +174,11 @@ namespace Bonsai.Harp
             return string.Empty;
         }
 
+        /// <summary>
+        /// Converts the specified unique identifier to a readable format.
+        /// </summary>
+        /// <param name="uid">The unique identifier to convert.</param>
+        /// <returns>The readable unique identifier, or an empty string if the input is null or empty.</returns>
         public static string GetReadableUid(string uid)
         {
             int readableUidLength = 8;

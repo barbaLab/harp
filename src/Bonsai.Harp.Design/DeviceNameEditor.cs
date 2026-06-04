@@ -20,6 +20,7 @@ namespace Bonsai.Harp.Design
     /// </summary>
     public class DeviceNameEditor : UITypeEditor
     {
+        /// <inheritdoc/>
         public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context)
         {
             var device = context?.Instance as Device;
@@ -39,6 +40,7 @@ namespace Bonsai.Harp.Design
             return UITypeEditorEditStyle.DropDown;
         }
 
+        /// <inheritdoc/>
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
         {
             if (context == null || provider == null) return value;
