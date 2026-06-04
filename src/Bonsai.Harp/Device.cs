@@ -236,6 +236,7 @@ namespace Bonsai.Harp
         /// </summary>
         [XmlIgnore]
         [Category("Connectivity")]
+        [TypeConverter(typeof(DeviceNameConverter))]
         [Editor("Bonsai.Harp.Design.DeviceNameEditor, Bonsai.Harp.Design", DesignTypes.UITypeEditor)]
         [Description("The name of the Harp device to select when using TCP.")]
         public string DeviceName
