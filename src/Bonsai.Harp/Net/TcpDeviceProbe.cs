@@ -102,10 +102,11 @@ namespace Bonsai.Harp.Net
             try
             {
                 var deviceName = await GetDeviceName(client).ConfigureAwait(false);
+                var deviceUid = await GetUid(client).ConfigureAwait(false);
+                deviceUid = DeviceProbe.GetReadableUid(deviceUid);
                 if (!string.IsNullOrEmpty(deviceName))
                 {
-                    var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                    deviceName = $"{deviceName} ({CreateClientKey(connectionName, deviceIp, deviceName)})";
+                    deviceName = $"{deviceName} ({deviceUid})";
                     deviceNames.Add(deviceName);
                 }
             }
@@ -126,15 +127,14 @@ namespace Bonsai.Harp.Net
             return await DeviceProbe.GetDeviceName(transport).ConfigureAwait(false);
         }
 
-        public static string CreateClientKey(string connectionName, string deviceIp, string deviceName)
+        public static async Task<string> GetUid(TcpClient client)
         {
-            var keySource = string.Concat(connectionName ?? string.Empty, "|", deviceIp ?? string.Empty, "|", deviceName ?? string.Empty);
-            using (var sha256 = SHA256.Create())
-            {
-                var hash = sha256.ComputeHash(System.Text.Encoding.UTF8.GetBytes(keySource));
-                var hex = BitConverter.ToString(hash).Replace("-", string.Empty);
-                return hex.Length > 8 ? hex.Substring(0, 8) : hex;
-            }
+            if (client == null) return string.Empty;
+
+            var transport = new TcpTransport(client, new Subject<HarpMessage>());
+            transport.IgnoreErrors = true;
+
+            return await DeviceProbe.GetUid(transport).ConfigureAwait(false);
         }
     }
 }

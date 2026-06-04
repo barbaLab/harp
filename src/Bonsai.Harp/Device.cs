@@ -205,7 +205,9 @@ namespace Bonsai.Harp
                     {
                         var transport = new SerialTransport(portName, new Subject<HarpMessage>());
                         transport.IgnoreErrors = true;
-                        deviceName = DeviceProbe.GetDeviceName(transport).GetAwaiter().GetResult();
+                        deviceName = DeviceProbe.GetDeviceName(transport, true).GetAwaiter().GetResult();
+                        var deviceUid = DeviceProbe.GetUid(transport).GetAwaiter().GetResult();
+                        uid = DeviceProbe.GetReadableUid(deviceUid);
                     }
                     catch { /*ignore*/ }
                     finally

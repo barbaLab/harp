@@ -262,20 +262,19 @@ namespace Bonsai.Harp.Design
 
         async Task ProbeClientAsync(TcpClient client)
         {
+            var displayName = string.Empty;
             var gateAcquired = false;
             try
             {
-                Console.WriteLine($"Waiting for probe gate for TCP client from {client.Client.RemoteEndPoint}...");
                 await probeGate.WaitAsync(cancellation.Token).ConfigureAwait(false);
                 gateAcquired = true;
 
-                Console.WriteLine($"Probing TCP client from {client.Client.RemoteEndPoint}...");
                 var deviceName = await TcpDeviceProbe.GetDeviceName(client).ConfigureAwait(false);
-                Console.WriteLine($"Probed TCP client from {client.Client.RemoteEndPoint}, device name: {deviceName}");
+                var deviceUid = await TcpDeviceProbe.GetUid(client).ConfigureAwait(false);
+                deviceUid = DeviceProbe.GetReadableUid(deviceUid);
                 if (!string.IsNullOrEmpty(deviceName))
                 {
-                    var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                    var displayName = $"{deviceName} ({TcpDeviceProbe.CreateClientKey(connectionName, deviceIp, deviceName)})";
+                    displayName = $"{deviceName} ({deviceUid})";
 
                     lock (clientsLock)
                     {

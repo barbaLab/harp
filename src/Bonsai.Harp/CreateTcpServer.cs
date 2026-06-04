@@ -227,9 +227,8 @@ namespace Bonsai.Harp
                     return;
                 }
 
-                // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
-                var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                var deviceUid = TcpDeviceProbe.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                var deviceUid = await TcpDeviceProbe.GetUid(client).ConfigureAwait(false);
+                deviceUid = DeviceProbe.GetReadableUid(deviceUid);
                 await TcpClientsManager.WaitForExpectedTcpClientAsync(configuration.Name, deviceUid, cancellationToken).ConfigureAwait(false);
                 if (!TcpClientsManager.TryAttachTcpClient(configuration.Name, deviceUid, client))
                 {
@@ -287,9 +286,8 @@ namespace Bonsai.Harp
             {
                 if (!cancellationToken.IsCancellationRequested)
                 {
-                    // FIXME: deviceUid should be retrieved from Harp protocol instead of being generated here
-                    var deviceIp = ((IPEndPoint)client.Client.RemoteEndPoint).Address.ToString();
-                    var deviceUid = TcpDeviceProbe.CreateClientKey(configuration.Name, deviceIp, deviceName);
+                    var deviceUid = await TcpDeviceProbe.GetUid(client).ConfigureAwait(false);
+                    deviceUid = DeviceProbe.GetReadableUid(deviceUid);
                     TcpClientsManager.UnregisterTcpClient(configuration.Name, deviceUid);
                     WriteLog("client disconnected: " + deviceName + " (" + deviceUid + ")");
                     client.Dispose();

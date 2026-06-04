@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 
 namespace Bonsai.Harp
 {
-    interface ITransport : IDisposable
+    public interface ITransport : IDisposable
     {
         bool IgnoreErrors { get; set; }
 
