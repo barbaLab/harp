@@ -22,7 +22,21 @@ namespace Bonsai.Harp.Design
     {
         public override UITypeEditorEditStyle GetEditStyle(ITypeDescriptorContext context)
         {
-            return TryGetDeviceServer(context) ? UITypeEditorEditStyle.DropDown : UITypeEditorEditStyle.None;
+            var device = context?.Instance as Device;
+            if (device == null || string.IsNullOrEmpty(device.ConnectionName)) return UITypeEditorEditStyle.None;
+
+            var doesServerExist = DesignTimeTcpDeviceDiscovery.TryGetServer(context, device.ConnectionName, out var server) && server != null;
+            if (!doesServerExist)
+            {
+                throw new InvalidOperationException($"No CreateTcpServer with connection name '{device.ConnectionName}' is available in the workflow.");
+            }
+
+            if (server.Port == 0 || server.Port > 65535)
+            {
+                throw new InvalidOperationException($"Invalid port number specified in CreateTcpServer '{device.ConnectionName}'. Must be between 1 and 65535.");
+            }
+
+            return UITypeEditorEditStyle.DropDown;
         }
 
         public override object EditValue(ITypeDescriptorContext context, IServiceProvider provider, object value)
@@ -32,43 +46,18 @@ namespace Bonsai.Harp.Design
             var editorService = (IWindowsFormsEditorService)provider.GetService(typeof(IWindowsFormsEditorService));
             if (editorService == null) return value;
 
-            var device = GetDevice(context.Instance);
+            var device = context?.Instance as Device;
             if (device == null || string.IsNullOrEmpty(device.ConnectionName)) return value;
 
-            using var dropdown = new DeviceNameDropDownControl(value as string);
-            using var discovery = TcpDeviceDiscovery.TryCreate(context, device.ConnectionName, dropdown.AddDeviceName, out var statusText);
+            using var dropdown = new DeviceNameDropDownControl();
+            using var discovery = DesignTimeTcpDeviceDiscovery.TryStart(context, device.ConnectionName, dropdown.AddDeviceName, dropdown.RemoveDeviceName, out var statusText);
             dropdown.SetStatus(statusText);
 
             dropdown.SelectionCommitted += (_, __) => editorService.CloseDropDown();
             editorService.DropDownControl(dropdown);
+            discovery?.Dispose();
 
             return dropdown.SelectedDeviceName ?? value;
-        }
-
-        static Device GetDevice(object instance)
-        {
-            if (instance is Device device)
-            {
-                return device;
-            }
-
-            if (instance is object[] array)
-            {
-                foreach (var item in array)
-                {
-                    if (item is Device arrayDevice)
-                    {
-                        return arrayDevice;
-                    }
-                }
-            }
-
-            return null;
-        }
-
-        static bool TryGetDeviceServer(ITypeDescriptorContext context)
-        {
-            return TcpDeviceDiscovery.TryGetServer(context, GetDevice(context?.Instance)?.ConnectionName, out var server) && server != null && server.Port > 0;
         }
     }
 
@@ -77,7 +66,7 @@ namespace Bonsai.Harp.Design
         readonly ListBox listBox;
         readonly Label statusLabel;
 
-        public DeviceNameDropDownControl(string selectedDeviceName)
+        public DeviceNameDropDownControl()
         {
             listBox = new ListBox
             {
@@ -99,16 +88,8 @@ namespace Bonsai.Harp.Design
             Controls.Add(statusLabel);
             statusLabel.BringToFront();
             BackColor = SystemColors.Window;
-            MinimumSize = new Size(160, 80);
+            MinimumSize = new Size(220, 100);
             Size = MinimumSize;
-
-            // if (!string.IsNullOrEmpty(selectedDeviceName))
-            // {
-            //     listBox.Items.Add(selectedDeviceName);
-            //     listBox.SelectedItem = selectedDeviceName;
-            //     statusLabel.Visible = false;
-            //     listBox.BringToFront();
-            // }
         }
 
         public event EventHandler SelectionCommitted;
@@ -123,7 +104,7 @@ namespace Bonsai.Harp.Design
 
             if (InvokeRequired)
             {
-                BeginInvoke((Action<string>)AddDeviceName, deviceName);
+                BeginInvoke(AddDeviceName, deviceName);
                 return;
             }
 
@@ -138,13 +119,33 @@ namespace Bonsai.Harp.Design
             }
         }
 
+        public void RemoveDeviceName(string deviceName)
+        {
+            if (string.IsNullOrEmpty(deviceName)) return;
+
+            if (IsDisposed) return;
+
+            if (InvokeRequired)
+            {
+                BeginInvoke(RemoveDeviceName, deviceName);
+                return;
+            }
+
+            listBox.Items.Remove(deviceName);
+            if (listBox.Items.Count == 0)
+            {
+                statusLabel.Visible = true;
+                statusLabel.BringToFront();
+            }
+        }
+
         public void SetStatus(string text)
         {
             if (IsDisposed) return;
 
             if (InvokeRequired)
             {
-                BeginInvoke((Action<string>)SetStatus, text);
+                BeginInvoke(SetStatus, text);
                 return;
             }
 
@@ -175,28 +176,25 @@ namespace Bonsai.Harp.Design
         }
     }
 
-    sealed class TcpDeviceDiscovery : IDisposable
+    sealed class DesignTimeTcpDeviceDiscovery : IDisposable
     {
-        const int ServerTimeoutMilliseconds = 1000;
         const int MaxConcurrentProbes = 8;
 
         readonly TcpListener listener;
         readonly CancellationTokenSource cancellation;
         readonly SemaphoreSlim probeGate;
-        readonly HashSet<string> deviceNames;
         List<TcpClient> activeClients;
         readonly object clientsLock;
-        readonly string connectionName;
         readonly Action<string> onDeviceDiscovered;
+        readonly Action<string> onDeviceDisconnected;
         bool disposed;
 
-        TcpDeviceDiscovery(int port, string connectionName, Action<string> onDeviceDiscovered)
+        DesignTimeTcpDeviceDiscovery(int port, Action<string> onDeviceDiscovered, Action<string> onDeviceDisconnected)
         {
-            this.connectionName = connectionName;
             this.onDeviceDiscovered = onDeviceDiscovered;
+            this.onDeviceDisconnected = onDeviceDisconnected;
             cancellation = new CancellationTokenSource();
             probeGate = new SemaphoreSlim(MaxConcurrentProbes, MaxConcurrentProbes);
-            deviceNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             activeClients = new List<TcpClient>();
             clientsLock = new object();
 
@@ -205,22 +203,20 @@ namespace Bonsai.Harp.Design
             _ = Task.Run(AcceptClientsAsync);
         }
 
-        public static IDisposable TryCreate(ITypeDescriptorContext context, string connectionName, Action<string> onDeviceName, out string statusText)
+        internal static IDisposable TryStart(ITypeDescriptorContext context, string connectionName, Action<string> onDeviceName, Action<string> onDeviceDisconnected, out string statusText)
         {
             statusText = "Waiting for Harp devices...";
 
-            if (!TryGetServer(context, connectionName, out var server) || server == null || server.Port <= 0)
+            if (!TryGetServer(context, connectionName, out var server) || server == null || server.Port == 0 || server.Port > 65535)
             {
-                statusText = "No TCP server is available for this connection.";
-                return new EmptyDisposable();
+                return null;
             }
 
-            return new TcpDeviceDiscovery(server.Port, connectionName, onDeviceName);
+            return new DesignTimeTcpDeviceDiscovery(server.Port, onDeviceName, onDeviceDisconnected);
         }
 
         async Task AcceptClientsAsync()
         {
-            Console.WriteLine("Waiting for TCP clients...");
             while (!cancellation.IsCancellationRequested)
             {
                 TcpClient client = null;
@@ -230,37 +226,27 @@ namespace Bonsai.Harp.Design
                     if (client == null) break;
 
                     client.NoDelay = true;
-                    client.SendTimeout = ServerTimeoutMilliseconds;
-                    client.ReceiveTimeout = ServerTimeoutMilliseconds;
-                    Console.WriteLine($"Accepted TCP client from {client.Client.RemoteEndPoint}");
+                    client.SendTimeout = Timeout.Infinite;
+                    client.ReceiveTimeout = Timeout.Infinite;
 
                     lock (clientsLock)
                     {
                         activeClients.Add(client);
                     }
 
-                    _ = Task.Run(() => ProbeClientAsync(client));
-                    // client = null;
+                    var displayName = await Task.Run(() => ProbeClientAsync(client));
+                    if (!string.IsNullOrEmpty(displayName))
+                    {
+                        _ = Task.Run(() => MonitorClientAsync(client, displayName));
+                    }
                 }
-                catch (ObjectDisposedException)
-                {
-                    break;
-                }
-                catch (SocketException)
-                {
-                    if (cancellation.IsCancellationRequested) break;
-                }
-                finally
-                {
-                    // if (client != null)
-                    // {
-                    //     CloseClient(client);
-                    // }
-                }
+                catch (ObjectDisposedException) { break; }
+                catch (SocketException) { if (cancellation.IsCancellationRequested) break; }
+                catch { /*ignore*/ }
             }
         }
 
-        async Task ProbeClientAsync(TcpClient client)
+        async Task<string> ProbeClientAsync(TcpClient client)
         {
             var displayName = string.Empty;
             var gateAcquired = false;
@@ -278,28 +264,38 @@ namespace Bonsai.Harp.Design
 
                     lock (clientsLock)
                     {
-                        if (deviceNames.Add(displayName))
-                        {
-                            onDeviceDiscovered?.Invoke(displayName);
-                        }
+                        onDeviceDiscovered?.Invoke(displayName);
                     }
                 }
             }
-            catch (OperationCanceledException)
-            {
-            }
-            catch
-            {
-            }
+            catch (OperationCanceledException) { /*ignore*/ }
+            catch { /*ignore*/ }
             finally
             {
                 if (gateAcquired)
                 {
                     try { probeGate.Release(); } catch { }
                 }
-
-                // CloseClient(client);
             }
+
+            return displayName;
+        }
+
+        async Task MonitorClientAsync(TcpClient client, string displayName)
+        {
+            while (!cancellation.IsCancellationRequested)
+            {
+                // TODO: Check Harp heartbeats
+            }
+            // await Task.Delay(5000, cancellation.Token).ConfigureAwait(false);
+
+            lock (clientsLock)
+            {
+                Console.WriteLine($"Client '{displayName}' disconnected.");
+                activeClients.Remove(client);
+                onDeviceDisconnected?.Invoke(displayName);
+            }
+            try { client.Close(); } catch { }
         }
 
         internal static bool TryGetServer(ITypeDescriptorContext context, string connectionName, out CreateTcpServer server)
@@ -317,16 +313,13 @@ namespace Bonsai.Harp.Design
             return server != null;
         }
 
-        void CloseClient(TcpClient client)
+        internal static bool TryStop(IDisposable discovery)
         {
-            if (client == null) return;
+            if (discovery == null) return false;
 
-            lock (clientsLock)
-            {
-                activeClients.Remove(client);
-            }
-
-            try { client.Close(); } catch { }
+            try { discovery.Dispose(); }
+            catch { /*ignore*/ }
+            return true;
         }
 
         public void Dispose()
@@ -351,13 +344,6 @@ namespace Bonsai.Harp.Design
 
             try { probeGate.Dispose(); } catch { }
             try { cancellation.Dispose(); } catch { }
-        }
-
-        sealed class EmptyDisposable : IDisposable
-        {
-            public void Dispose()
-            {
-            }
         }
     }
 }
