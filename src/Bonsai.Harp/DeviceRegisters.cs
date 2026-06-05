@@ -9,6 +9,8 @@ namespace Bonsai.Harp
     [Obsolete]
     public static class DeviceRegisters
     {
+        // FIXME: several registers are labelled as read-only, but they're not according to Harp protocol v1.13.0 specs.
+
         /// <summary>
         /// The address of the WHO_AM_I register used to verify the identity class of
         /// the device. This field is read-only.
@@ -94,6 +96,12 @@ namespace Bonsai.Harp
         public const int SerialNumber = 13;
 
         /// <summary>
+        /// The address of the CLOCK_CONFIG register containing the synchronization clock
+        /// configuration for the device.
+        /// </summary>
+        public const int ClockConfiguration = 14;
+
+        /// <summary>
         /// The payload type of the WHO_AM_I register. This field is read-only.
         /// </summary>
         public const PayloadType WhoAmIPayload = PayloadType.U16;
@@ -162,5 +170,10 @@ namespace Bonsai.Harp
         /// The payload type of the SERIAL_NUMBER register. This field is read-only.
         /// </summary>
         public const PayloadType SerialNumberPayload = PayloadType.U16;
+
+        /// <summary>
+        /// The payload type of the CLOCK_CONFIG register.
+        /// </summary>
+        public const PayloadType ClockConfigurationPayload = PayloadType.U8;
     }
 }
