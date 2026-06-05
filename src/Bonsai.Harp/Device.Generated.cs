@@ -27,7 +27,8 @@ namespace Bonsai.Harp
             { 11, typeof(ResetDevice) },
             { 12, typeof(DeviceName) },
             { 13, typeof(SerialNumber) },
-            { 14, typeof(ClockConfiguration) }
+            { 14, typeof(ClockConfiguration) },
+            { 16, typeof(Uid) }
         };
     }
 
@@ -1514,6 +1515,119 @@ namespace Bonsai.Harp
     }
 
     /// <summary>
+    /// Represents a register that stores the uid of the device.
+    /// </summary>
+    [Description("Stores the uid of the device.")]
+    public partial class Uid
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Uid"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 16;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="Uid"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="Uid"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 16;
+
+        static string ParsePayload(ArraySegment<byte> payload)
+        {
+            return BitConverter.ToString(payload.Array, payload.Offset, payload.Count);
+        }
+
+        static ArraySegment<byte> FormatPayload(string value)
+        {
+            var payload = new byte[RegisterLength];
+            for (int i = 0; i < RegisterLength; i++)
+            {
+                if (i * 2 + 1 >= value.Length) break;
+                payload[i] = Convert.ToByte(value.Substring(i * 2, 2), 16);
+            }
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="Uid"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static string GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="DeviceName"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="Uid"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Uid"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="Uid"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Uid"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// Uid register.
+    /// </summary>
+    /// <seealso cref="Uid"/>
+    [Description("Filters and selects timestamped messages from the Uid register.")]
+    public partial class TimestampedUid
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Uid"/> register. This field is constant.
+        /// </summary>
+        public const int Address = Uid.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="Uid"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetPayload(HarpMessage message)
+        {
+            return Uid.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
     /// Represents an operator that creates a message payload
     /// that specifies the identity class of the device.
     /// </summary>
@@ -2357,6 +2471,60 @@ namespace Bonsai.Harp
         public HarpMessage GetMessage(double timestamp, MessageType messageType)
         {
             return Bonsai.Harp.ClockConfiguration.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the uid of the device.
+    /// </summary>
+    [DisplayName("UidPayload")]
+    [Description("Creates a message payload that stores the uid of the device.")]
+    public partial class CreateUidPayload
+    {
+        /// <summary>
+        /// Gets or sets the value that stores the uid of the device.
+        /// </summary>
+        [Description("The value that stores the uid of the device.")]
+        public string Uid { get; set; }
+
+        /// <summary>
+        /// Creates a message payload for the Uid register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public string GetPayload()
+        {
+            return Uid;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the uid of the device.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the Uid register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.Uid.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the uid of the device.
+    /// </summary>
+    [DisplayName("TimestampedUidPayload")]
+    [Description("Creates a timestamped message payload that stores the uid of the device.")]
+    public partial class CreateTimestampedUidPayload : CreateUidPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the uid of the device.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the Uid register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.Uid.FromPayload(timestamp, messageType, GetPayload());
         }
     }
 

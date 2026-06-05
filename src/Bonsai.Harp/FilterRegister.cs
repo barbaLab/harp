@@ -28,6 +28,7 @@ namespace Bonsai.Harp
     /// <seealso cref="DeviceName"/>
     /// <seealso cref="SerialNumber"/>
     /// <seealso cref="ClockConfiguration"/>
+    /// <seealso cref="Uid"/>
     [XmlInclude(typeof(FilterRegisterAddress))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(HardwareVersionHigh))]
@@ -44,6 +45,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(DeviceName))]
     [XmlInclude(typeof(SerialNumber))]
     [XmlInclude(typeof(ClockConfiguration))]
+    [XmlInclude(typeof(Uid))]
     [Description("Filters the sequence for Harp messages matching the specified register address.")]
     public class FilterRegister : FilterRegisterBuilder, INamedElement
     {

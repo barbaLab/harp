@@ -28,6 +28,7 @@ namespace Bonsai.Harp
     /// <seealso cref="DeviceName"/>
     /// <seealso cref="SerialNumber"/>
     /// <seealso cref="ClockConfiguration"/>
+    /// <seealso cref="Uid"/>
     [XmlInclude(typeof(ParseMessagePayload))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(HardwareVersionHigh))]
@@ -44,6 +45,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(DeviceName))]
     [XmlInclude(typeof(SerialNumber))]
     [XmlInclude(typeof(ClockConfiguration))]
+    [XmlInclude(typeof(Uid))]
     [XmlInclude(typeof(TimestampedWhoAmI))]
     [XmlInclude(typeof(TimestampedHardwareVersionHigh))]
     [XmlInclude(typeof(TimestampedHardwareVersionLow))]
@@ -59,6 +61,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(TimestampedDeviceName))]
     [XmlInclude(typeof(TimestampedSerialNumber))]
     [XmlInclude(typeof(TimestampedClockConfiguration))]
+    [XmlInclude(typeof(TimestampedUid))]
     [Description("Filters and selects standard Harp messages reported by the device.")]
     public class Parse : ParseBuilder, INamedElement
     {

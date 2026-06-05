@@ -27,6 +27,7 @@ namespace Bonsai.Harp
     /// <seealso cref="DeviceName"/>
     /// <seealso cref="SerialNumber"/>
     /// <seealso cref="ClockConfiguration"/>
+    /// <seealso cref="Uid"/>
     [XmlInclude(typeof(FormatMessagePayload))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(HardwareVersionHigh))]
@@ -43,6 +44,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(DeviceName))]
     [XmlInclude(typeof(SerialNumber))]
     [XmlInclude(typeof(ClockConfiguration))]
+    [XmlInclude(typeof(Uid))]
     [Description("Formats a sequence of values as standard Harp device messages.")]
     public class Format : FormatBuilder, INamedElement
     {
