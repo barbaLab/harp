@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
 
@@ -29,6 +30,7 @@ namespace Bonsai.Harp
             { 13, typeof(SerialNumber) },
             { 14, typeof(ClockConfiguration) },
             { 16, typeof(Uid) },
+            { 17, typeof(Tag) },
             { 19, typeof(Version) }
         };
     }
@@ -1629,6 +1631,115 @@ namespace Bonsai.Harp
     }
 
     /// <summary>
+    /// Represents a register that stores the device firmware build tag.
+    /// </summary>
+    [Description("Stores the device firmware build tag.")]
+    public partial class Tag
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Tag"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 17;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="Tag"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="Tag"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 8;
+
+        static string ParsePayload(ArraySegment<byte> payload)
+        {
+            var count = Array.IndexOf(payload.Array, (byte)0, payload.Offset, payload.Count) - payload.Offset;
+            return Encoding.ASCII.GetString(payload.Array, payload.Offset, count);
+        }
+
+        static ArraySegment<byte> FormatPayload(string value)
+        {
+            var payload = new byte[RegisterLength];
+            Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="Tag"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static string GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="Tag"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="Tag"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the register.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Tag"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="Tag"/> register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Tag"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// Tag register.
+    /// </summary>
+    /// <seealso cref="Tag"/>
+    [Description("Filters and selects timestamped messages from the Tag register.")]
+    public partial class TimestampedTag
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Tag"/> register. This field is constant.
+        /// </summary>
+        public const int Address = Tag.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="Tag"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetPayload(HarpMessage message)
+        {
+            return Tag.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
     /// Represents a register that stores the version of the device components.
     /// </summary>
     [Description("Stores the version of the device components.")]
@@ -2649,6 +2760,60 @@ namespace Bonsai.Harp
         public HarpMessage GetMessage(double timestamp, MessageType messageType)
         {
             return Bonsai.Harp.Uid.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the device firmware build tag.
+    /// </summary>
+    [DisplayName("TagPayload")]
+    [Description("Creates a message payload that stores the device firmware build tag.")]
+    public partial class CreateTagPayload
+    {
+        /// <summary>
+        /// Gets or sets the value that stores the device firmware build tag.
+        /// </summary>
+        [Description("The value that stores the device firmware build tag.")]
+        public string Tag { get; set; }
+
+        /// <summary>
+        /// Creates a message payload for the Tag register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public string GetPayload()
+        {
+            return Tag;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the device firmware build tag.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the Tag register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.Tag.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the device firmware build tag.
+    /// </summary>
+    [DisplayName("TimestampedTagPayload")]
+    [Description("Creates a timestamped message payload that stores the device firmware build tag.")]
+    public partial class CreateTimestampedTagPayload : CreateTagPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the device firmware build tag.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the Tag register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.Tag.FromPayload(timestamp, messageType, GetPayload());
         }
     }
 

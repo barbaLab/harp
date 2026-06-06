@@ -108,6 +108,11 @@ namespace Bonsai.Harp
         public const int Uid = 16;
 
         /// <summary>
+        /// The address of the TAG register containing the device firmware build tag. This field is read-only.
+        /// </summary>
+        public const int Tag = 17;
+
+        /// <summary>
         /// The address of the VERSION register containing the semantic version of the Device components.
         /// This field is read-only.
         /// </summary>
@@ -192,6 +197,11 @@ namespace Bonsai.Harp
         /// The payload type of the UID register. This field is read-only.
         /// </summary>
         public const PayloadType UidPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the TAG register. This field is read-only.
+        /// </summary>
+        public const PayloadType TagPayload = PayloadType.U8;
 
         /// <summary>
         /// The payload type of the VERSION register. This field is read-only.
