@@ -1244,7 +1244,10 @@ namespace Bonsai.Harp
         static ArraySegment<byte> FormatPayload(string value)
         {
             var payload = new byte[RegisterLength];
-            Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            if (!string.IsNullOrEmpty(value))
+            {
+                Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            }
             return new ArraySegment<byte>(payload);
         }
 
@@ -1660,7 +1663,10 @@ namespace Bonsai.Harp
         static ArraySegment<byte> FormatPayload(string value)
         {
             var payload = new byte[RegisterLength];
-            Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            if (!string.IsNullOrEmpty(value))
+            {
+                Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            }
             return new ArraySegment<byte>(payload);
         }
 
