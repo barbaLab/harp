@@ -28,7 +28,8 @@ namespace Bonsai.Harp
             { 12, typeof(DeviceName) },
             { 13, typeof(SerialNumber) },
             { 14, typeof(ClockConfiguration) },
-            { 16, typeof(Uid) }
+            { 16, typeof(Uid) },
+            { 19, typeof(Version) }
         };
     }
 
@@ -1628,6 +1629,129 @@ namespace Bonsai.Harp
     }
 
     /// <summary>
+    /// Represents a register that stores the version of the device components.
+    /// </summary>
+    [Description("Stores the version of the device components.")]
+    public partial class Version
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Version"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 19;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="Version"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="Version"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 32;
+
+        static VersionPayload ParsePayload(ArraySegment<byte> payload)
+        {
+            var result = new VersionPayload();
+            result.ProtocolVersion.Major = payload.Array[payload.Offset];
+            result.ProtocolVersion.Minor = payload.Array[payload.Offset + 1];
+            result.ProtocolVersion.Patch = payload.Array[payload.Offset + 2];
+            result.FirmwareVersion.Major = payload.Array[payload.Offset + 3];
+            result.FirmwareVersion.Minor = payload.Array[payload.Offset + 4];
+            result.FirmwareVersion.Patch = payload.Array[payload.Offset + 5];
+            result.HardwareVersion.Major = payload.Array[payload.Offset + 6];
+            result.HardwareVersion.Minor = payload.Array[payload.Offset + 7];
+            result.HardwareVersion.Patch = payload.Array[payload.Offset + 8];
+            result.CoreId = System.Text.Encoding.ASCII.GetString(payload.Array, payload.Offset + 9, 3);
+            result.InterfaceHash = BitConverter.ToString(payload.Array, payload.Offset + 12, 20);
+
+            return result;
+        }
+
+        static ArraySegment<byte> FormatPayload(VersionPayload value)
+        {
+            // FIXME: value is not used.
+            var payload = new byte[RegisterLength];
+
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="Version"/> register messages.
+        /// </summary>
+        /// <param name="message"></param>
+        /// <returns></returns>
+        public static VersionPayload GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="Version"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<VersionPayload> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="Version"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the created message.</param>
+        /// <param name="value">The payload value for the message.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Version"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, VersionPayload value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="Version"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="Version"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, VersionPayload value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// Version register.
+    /// </summary>
+    /// <seealso cref="Version"/>
+    [Description("Filters and selects timestamped messages from the Version register.")]
+    public partial class TimestampedVersion
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="Version"/> register. This field is constant.
+        /// </summary>
+        public const int Address = Version.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="Version"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<VersionPayload> GetPayload(HarpMessage message)
+        {
+            return Version.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
     /// Represents an operator that creates a message payload
     /// that specifies the identity class of the device.
     /// </summary>
@@ -2529,6 +2653,60 @@ namespace Bonsai.Harp
     }
 
     /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the version of the device components.
+    /// </summary>
+    [DisplayName("VersionPayload")]
+    [Description("Creates a message payload that stores the version of the device components.")]
+    public partial class CreateVersionPayload
+    {
+        /// <summary>
+        /// Gets or sets the value that stores the version of the device components.
+        /// </summary>
+        [Description("The value that stores the version of the device components.")]
+        public VersionPayload Version { get; set; }
+
+        /// <summary>
+        /// Creates a message payload for the Version register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public VersionPayload GetPayload()
+        {
+            return Version;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the version of the device components.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the Version register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.Version.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the version of the device components.
+    /// </summary>
+    [DisplayName("TimestampedVersionPayload")]
+    [Description("Creates a timestamped message payload that stores the version of the device components.")]
+    public partial class CreateTimestampedVersionPayload : CreateVersionPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the version of the device components.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the Version register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.Version.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
     /// Represents the payload of the OperationControl register.
     /// </summary>
     public struct OperationControlPayload
@@ -2587,6 +2765,90 @@ namespace Bonsai.Harp
         /// Specifies whether the device should report the content of the seconds register each second.
         /// </summary>
         public EnableFlag Heartbeat;
+    }
+
+    /// <summary>
+    /// Represents the payload of the Version register.
+    /// </summary>
+    public struct VersionPayload
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="VersionPayload"/> structure.
+        /// </summary>
+        /// <param name="protocolVersion">Specifies the version of the Harp protocol implemented by the device.</param>
+        /// <param name="firmwareVersion">Specifies the version of the device firmware application.</param>
+        /// <param name="hardwareVersion">Specifies the version of the device hardware.</param>
+        /// <param name="coreId">Specifies the three-character code of the Harp microcontroller core targeted by the device firmware.</param>
+        /// <param name="interfaceHash"> Specifies the SHA-1 hash value of the device interface schema file (device.yml).</param>
+        public VersionPayload(
+            SemanticVersion protocolVersion,
+            SemanticVersion firmwareVersion,
+            SemanticVersion hardwareVersion,
+            string coreId,
+            string interfaceHash)
+        {
+            ProtocolVersion = protocolVersion;
+            FirmwareVersion = firmwareVersion;
+            HardwareVersion = hardwareVersion;
+            CoreId = coreId;
+            InterfaceHash = interfaceHash;
+        }
+
+        /// <summary>
+        /// Specifies the version of the Harp protocol implemented by the device.
+        /// </summary>
+        public SemanticVersion ProtocolVersion;
+        /// <summary>
+        /// Specifies the version of the device firmware application.
+        /// </summary>
+        public SemanticVersion FirmwareVersion;
+        /// <summary>
+        /// Specifies the version of the device hardware.
+        /// </summary>
+        public SemanticVersion HardwareVersion;
+        /// <summary>
+        /// Specifies the three-character code of the Harp microcontroller core targeted by the device firmware.
+        /// </summary>
+        public string CoreId;
+        /// <summary>
+        /// Specifies the SHA-1 hash value of the device interface schema file (device.yml).
+        /// </summary>
+        public string InterfaceHash;
+    }
+
+    /// <summary>
+    /// Represents a semantic version number with major, minor, and patch components.
+    /// </summary>
+    public struct SemanticVersion
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SemanticVersion"/> structure.
+        /// </summary>
+        /// <param name="major">The major version component.</param>
+        /// <param name="minor">The minor version component.</param>
+        /// <param name="patch">The patch version component.</param>
+        public SemanticVersion(
+            byte major,
+            byte minor,
+            byte patch)
+        {
+            Major = major;
+            Minor = minor;
+            Patch = patch;
+        }
+
+        /// <summary>
+        /// Specifies the major version component of the semantic version number.
+        /// </summary>
+        public byte Major;
+        /// <summary>
+        /// Specifies the minor version component of the semantic version number.
+        /// </summary>
+        public byte Minor;
+        /// <summary>
+        /// Specifies the patch version component of the semantic version number.
+        /// </summary>
+        public byte Patch;
     }
 
     /// <summary>

@@ -108,6 +108,12 @@ namespace Bonsai.Harp
         public const int Uid = 16;
 
         /// <summary>
+        /// The address of the VERSION register containing the semantic version of the Device components.
+        /// This field is read-only.
+        /// </summary>
+        public const int Version = 19;
+
+        /// <summary>
         /// The payload type of the WHO_AM_I register. This field is read-only.
         /// </summary>
         public const PayloadType WhoAmIPayload = PayloadType.U16;
@@ -186,5 +192,10 @@ namespace Bonsai.Harp
         /// The payload type of the UID register. This field is read-only.
         /// </summary>
         public const PayloadType UidPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the VERSION register. This field is read-only.
+        /// </summary>
+        public const PayloadType VersionPayload = PayloadType.U8;
     }
 }

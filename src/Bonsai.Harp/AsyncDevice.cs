@@ -227,6 +227,22 @@ namespace Bonsai.Harp
         }
 
         /// <summary>
+        /// Asynchronously reads the version of the device components.
+        /// </summary>
+        /// <param name="cancellationToken">
+        /// A <see cref="CancellationToken"/> which can be used to cancel the operation.
+        /// </param>
+        /// <returns>
+        /// A task that represents the asynchronous read operation. The <see cref="Task{TResult}.Result"/>
+        /// property contains the version of the device components.
+        /// </returns>
+        public async Task<VersionPayload> ReadVersionAsync(CancellationToken cancellationToken = default)
+        {
+            var version = await CommandAsync(HarpCommand.ReadByte(Version.Address), cancellationToken);
+            return Version.GetPayload(version);
+        }
+
+        /// <summary>
         /// Asynchronously reads the value of an 8-bit unsigned integer register with
         /// the specified address.
         /// </summary>

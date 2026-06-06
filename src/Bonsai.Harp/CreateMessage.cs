@@ -28,6 +28,7 @@ namespace Bonsai.Harp
     /// <seealso cref="CreateSerialNumberPayload"/>
     /// <seealso cref="CreateClockConfigurationPayload"/>
     /// <seealso cref="CreateUidPayload"/>
+    /// <seealso cref="CreateVersionPayload"/>
     [XmlInclude(typeof(CreateMessagePayload))]
     [XmlInclude(typeof(CreateWhoAmIPayload))]
     [XmlInclude(typeof(CreateHardwareVersionHighPayload))]
@@ -45,6 +46,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(CreateSerialNumberPayload))]
     [XmlInclude(typeof(CreateClockConfigurationPayload))]
     [XmlInclude(typeof(CreateUidPayload))]
+    [XmlInclude(typeof(CreateVersionPayload))]
     [XmlInclude(typeof(CreateTimestampedWhoAmIPayload))]
     [XmlInclude(typeof(CreateTimestampedHardwareVersionHighPayload))]
     [XmlInclude(typeof(CreateTimestampedHardwareVersionLowPayload))]
@@ -61,6 +63,7 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(CreateTimestampedSerialNumberPayload))]
     [XmlInclude(typeof(CreateTimestampedClockConfigurationPayload))]
     [XmlInclude(typeof(CreateTimestampedUidPayload))]
+    [XmlInclude(typeof(CreateTimestampedVersionPayload))]
     [Description("Creates a sequence of standard message payloads for Harp devices.")]
     public class CreateMessage : CreateMessageBuilder, INamedElement
     {
