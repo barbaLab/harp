@@ -1,6 +1,7 @@
 ﻿using System;
 using System.ComponentModel;
 using System.Globalization;
+using Semver;
 
 namespace Bonsai.Harp.Design
 {
@@ -28,34 +29,11 @@ namespace Bonsai.Harp.Design
 
         public string DeviceName { get; set; }
 
-        internal int FirmwareVersionHigh { get; set; }
+        public SemVersion FirmwareVersion { get; set; }
 
-        internal int FirmwareVersionLow { get; set; }
+        public SemVersion ProtocolVersion { get; set; }
 
-        internal int CoreVersionHigh { get; set; }
-
-        internal int CoreVersionLow { get; set; }
-
-        internal int HardwareVersionHigh { get; set; }
-
-        internal int HardwareVersionLow { get; set; }
-
-        public HarpVersion FirmwareVersion
-        {
-            get { return new HarpVersion(FirmwareVersionHigh, FirmwareVersionLow); }
-        }
-
-        public HarpVersion CoreVersion
-        {
-            get { return new HarpVersion(CoreVersionHigh, CoreVersionLow); }
-        }
-
-        public HarpVersion HardwareVersion
-        {
-            get { return new HarpVersion(HardwareVersionHigh, HardwareVersionLow); }
-        }
-
-        public int AssemblyVersion { get; internal set; }
+        public SemVersion HardwareVersion { get; set; }
 
         public int WhoAmI { get; internal set; }
 
@@ -69,9 +47,9 @@ namespace Bonsai.Harp.Design
             return string.Join(
                 Environment.NewLine,
                 !SerialNumber.HasValue ? $"WhoAmI: {WhoAmI}" : $"WhoAmI: {WhoAmI}-{SerialNumber:x4}",
-                $"HardwareVersion: {HardwareVersionHigh}.{HardwareVersionLow}",
-                $"FirmwareVersion: {FirmwareVersionHigh}.{FirmwareVersionLow}",
-                $"CoreVersion: {CoreVersionHigh}.{CoreVersionLow}",
+                $"HardwareVersion: {HardwareVersion}",
+                $"FirmwareVersion: {FirmwareVersion}",
+                $"HarpProtocolVersion: {ProtocolVersion}",
                 $"Timestamp (s): {Timestamp}",
                 $"DeviceName: {DeviceName}");
         }

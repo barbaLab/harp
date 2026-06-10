@@ -140,26 +140,11 @@ namespace Bonsai.Harp.Design
                 case WhoAmI.Address:
                     configuration.WhoAmI = WhoAmI.GetPayload(message);
                     break;
-                case HardwareVersionHigh.Address:
-                    configuration.HardwareVersionHigh = HardwareVersionHigh.GetPayload(message);
-                    break;
-                case HardwareVersionLow.Address:
-                    configuration.HardwareVersionLow = HardwareVersionLow.GetPayload(message);
-                    break;
-                case FirmwareVersionHigh.Address:
-                    configuration.FirmwareVersionHigh = FirmwareVersionHigh.GetPayload(message);
-                    break;
-                case FirmwareVersionLow.Address:
-                    configuration.FirmwareVersionLow = FirmwareVersionLow.GetPayload(message);
-                    break;
-                case CoreVersionHigh.Address:
-                    configuration.CoreVersionHigh = CoreVersionHigh.GetPayload(message);
-                    break;
-                case CoreVersionLow.Address:
-                    configuration.CoreVersionLow = CoreVersionLow.GetPayload(message);
-                    break;
-                case AssemblyVersion.Address:
-                    configuration.AssemblyVersion = AssemblyVersion.GetPayload(message);
+                case Version.Address:
+                    var version = Version.GetPayload(message);
+                    configuration.HardwareVersion = version.HardwareVersion;
+                    configuration.FirmwareVersion = version.FirmwareVersion;
+                    configuration.ProtocolVersion = version.ProtocolVersion;
                     break;
                 case TimestampSeconds.Address:
                     configuration.Timestamp = TimestampSeconds.GetPayload(message);

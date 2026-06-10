@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
+using Semver;
 
 namespace Bonsai.Harp
 {
@@ -15,13 +16,6 @@ namespace Bonsai.Harp
         public static IReadOnlyDictionary<int, Type> RegisterMap { get; } = new Dictionary<int, Type>
         {
             { 0, typeof(WhoAmI) },
-            { 1, typeof(HardwareVersionHigh) },
-            { 2, typeof(HardwareVersionLow) },
-            { 3, typeof(AssemblyVersion) },
-            { 4, typeof(CoreVersionHigh) },
-            { 5, typeof(CoreVersionLow) },
-            { 6, typeof(FirmwareVersionHigh) },
-            { 7, typeof(FirmwareVersionLow) },
             { 8, typeof(TimestampSeconds) },
             { 9, typeof(TimestampMicroseconds) },
             { 10, typeof(OperationControl) },
@@ -136,6 +130,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the major hardware version of the device.
     /// </summary>
     [Description("Specifies the major hardware version of the device.")]
+    [Obsolete("The HardwareVersionHigh register is deprecated. Use the Version register instead.")]
     public partial class HardwareVersionHigh
     {
         /// <summary>
@@ -210,6 +205,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="HardwareVersionHigh"/>
     [Description("Filters and selects timestamped messages from the HardwareVersionHigh register.")]
+    [Obsolete("The TimestampedHardwareVersionHigh class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedHardwareVersionHigh
     {
         /// <summary>
@@ -232,6 +228,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the minor hardware version of the device.
     /// </summary>
     [Description("Specifies the minor hardware version of the device.")]
+    [Obsolete("The HardwareVersionLow register is deprecated. Use the Version register instead.")]
     public partial class HardwareVersionLow
     {
         /// <summary>
@@ -306,6 +303,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="HardwareVersionLow"/>
     [Description("Filters and selects timestamped messages from the HardwareVersionLow register.")]
+    [Obsolete("The TimestampedHardwareVersionLow class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedHardwareVersionLow
     {
         /// <summary>
@@ -328,6 +326,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the version of the assembled components in the device.
     /// </summary>
     [Description("Specifies the version of the assembled components in the device.")]
+    [Obsolete("The AssemblyVersion register is deprecated.")]
     public partial class AssemblyVersion
     {
         /// <summary>
@@ -402,6 +401,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="AssemblyVersion"/>
     [Description("Filters and selects timestamped messages from the AssemblyVersion register.")]
+    [Obsolete("The AssemblyVersion register is deprecated.")]
     public partial class TimestampedAssemblyVersion
     {
         /// <summary>
@@ -424,6 +424,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the major version of the Harp core implemented by the device.
     /// </summary>
     [Description("Specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionHigh register is deprecated. Use the Version register instead.")]
     public partial class CoreVersionHigh
     {
         /// <summary>
@@ -498,6 +499,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="CoreVersionHigh"/>
     [Description("Filters and selects timestamped messages from the CoreVersionHigh register.")]
+    [Obsolete("The TimestampedCoreVersionHigh class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedCoreVersionHigh
     {
         /// <summary>
@@ -520,6 +522,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the minor version of the Harp core implemented by the device.
     /// </summary>
     [Description("Specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionLow register is deprecated. Use the Version register instead.")]
     public partial class CoreVersionLow
     {
         /// <summary>
@@ -594,6 +597,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="CoreVersionLow"/>
     [Description("Filters and selects timestamped messages from the CoreVersionLow register.")]
+    [Obsolete("The TimestampedCoreVersionLow class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedCoreVersionLow
     {
         /// <summary>
@@ -616,6 +620,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the major version of the Harp core implemented by the device.
     /// </summary>
     [Description("Specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionHigh register is deprecated. Use the Version register instead.")]
     public partial class FirmwareVersionHigh
     {
         /// <summary>
@@ -690,6 +695,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="FirmwareVersionHigh"/>
     [Description("Filters and selects timestamped messages from the FirmwareVersionHigh register.")]
+    [Obsolete("The TimestampedFirmwareVersionHigh class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedFirmwareVersionHigh
     {
         /// <summary>
@@ -712,6 +718,7 @@ namespace Bonsai.Harp
     /// Represents a register that specifies the minor version of the Harp core implemented by the device.
     /// </summary>
     [Description("Specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionLow register is deprecated. Use the Version register instead.")]
     public partial class FirmwareVersionLow
     {
         /// <summary>
@@ -786,6 +793,7 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="FirmwareVersionLow"/>
     [Description("Filters and selects timestamped messages from the FirmwareVersionLow register.")]
+    [Obsolete("The TimestampedFirmwareVersionLow class is deprecated. Use the TimestampedVersion class instead.")]
     public partial class TimestampedFirmwareVersionLow
     {
         /// <summary>
@@ -1768,16 +1776,25 @@ namespace Bonsai.Harp
 
         static VersionPayload ParsePayload(ArraySegment<byte> payload)
         {
-            var result = new VersionPayload();
-            result.ProtocolVersion.Major = payload.Array[payload.Offset];
-            result.ProtocolVersion.Minor = payload.Array[payload.Offset + 1];
-            result.ProtocolVersion.Patch = payload.Array[payload.Offset + 2];
-            result.FirmwareVersion.Major = payload.Array[payload.Offset + 3];
-            result.FirmwareVersion.Minor = payload.Array[payload.Offset + 4];
-            result.FirmwareVersion.Patch = payload.Array[payload.Offset + 5];
-            result.HardwareVersion.Major = payload.Array[payload.Offset + 6];
-            result.HardwareVersion.Minor = payload.Array[payload.Offset + 7];
-            result.HardwareVersion.Patch = payload.Array[payload.Offset + 8];
+            VersionPayload result;
+            result.ProtocolVersion = new SemVersion(
+                payload.Array[payload.Offset],
+                payload.Array[payload.Offset + 1],
+                payload.Array[payload.Offset + 2]
+            );
+
+            result.FirmwareVersion = new SemVersion(
+                payload.Array[payload.Offset + 3],
+                payload.Array[payload.Offset + 4],
+                payload.Array[payload.Offset + 5]
+            );
+
+            result.HardwareVersion = new SemVersion(
+                payload.Array[payload.Offset + 6],
+                payload.Array[payload.Offset + 7],
+                payload.Array[payload.Offset + 8]
+            );
+
             result.CoreId = System.Text.Encoding.ASCII.GetString(payload.Array, payload.Offset + 9, 3);
             result.InterfaceHash = BitConverter.ToString(payload.Array, payload.Offset + 12, 20);
 
@@ -1928,6 +1945,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("HardwareVersionHighPayload")]
     [Description("Creates a message payload that specifies the major hardware version of the device.")]
+    [Obsolete("The HardwareVersionHigh register is deprecated.")]
     public partial class CreateHardwareVersionHighPayload
     {
         /// <summary>
@@ -1962,6 +1980,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedHardwareVersionHighPayload")]
     [Description("Creates a timestamped message payload that specifies the major hardware version of the device.")]
+    [Obsolete("The HardwareVersionHigh register is deprecated.")]
     public partial class CreateTimestampedHardwareVersionHighPayload : CreateHardwareVersionHighPayload
     {
         /// <summary>
@@ -1982,6 +2001,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("HardwareVersionLowPayload")]
     [Description("Creates a message payload that specifies the minor hardware version of the device.")]
+    [Obsolete("The HardwareVersionLow register is deprecated.")]
     public partial class CreateHardwareVersionLowPayload
     {
         /// <summary>
@@ -2016,6 +2036,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedHardwareVersionLowPayload")]
     [Description("Creates a timestamped message payload that specifies the minor hardware version of the device.")]
+    [Obsolete("The HardwareVersionLow register is deprecated.")]
     public partial class CreateTimestampedHardwareVersionLowPayload : CreateHardwareVersionLowPayload
     {
         /// <summary>
@@ -2036,6 +2057,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("AssemblyVersionPayload")]
     [Description("Creates a message payload that specifies the version of the assembled components in the device.")]
+    [Obsolete("The AssemblyVersion register is deprecated.")]
     public partial class CreateAssemblyVersionPayload
     {
         /// <summary>
@@ -2070,6 +2092,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedAssemblyVersionPayload")]
     [Description("Creates a timestamped message payload that specifies the version of the assembled components in the device.")]
+    [Obsolete("The AssemblyVersion register is deprecated.")]
     public partial class CreateTimestampedAssemblyVersionPayload : CreateAssemblyVersionPayload
     {
         /// <summary>
@@ -2090,6 +2113,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("CoreVersionHighPayload")]
     [Description("Creates a message payload that specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionHigh register is deprecated.")]
     public partial class CreateCoreVersionHighPayload
     {
         /// <summary>
@@ -2124,6 +2148,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedCoreVersionHighPayload")]
     [Description("Creates a timestamped message payload that specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionHigh register is deprecated.")]
     public partial class CreateTimestampedCoreVersionHighPayload : CreateCoreVersionHighPayload
     {
         /// <summary>
@@ -2144,6 +2169,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("CoreVersionLowPayload")]
     [Description("Creates a message payload that specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionLow register is deprecated.")]
     public partial class CreateCoreVersionLowPayload
     {
         /// <summary>
@@ -2178,6 +2204,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedCoreVersionLowPayload")]
     [Description("Creates a timestamped message payload that specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The CoreVersionLow register is deprecated.")]
     public partial class CreateTimestampedCoreVersionLowPayload : CreateCoreVersionLowPayload
     {
         /// <summary>
@@ -2198,6 +2225,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("FirmwareVersionHighPayload")]
     [Description("Creates a message payload that specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionHigh register is deprecated.")]
     public partial class CreateFirmwareVersionHighPayload
     {
         /// <summary>
@@ -2232,6 +2260,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedFirmwareVersionHighPayload")]
     [Description("Creates a timestamped message payload that specifies the major version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionHigh register is deprecated.")]
     public partial class CreateTimestampedFirmwareVersionHighPayload : CreateFirmwareVersionHighPayload
     {
         /// <summary>
@@ -2252,6 +2281,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("FirmwareVersionLowPayload")]
     [Description("Creates a message payload that specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionLow register is deprecated.")]
     public partial class CreateFirmwareVersionLowPayload
     {
         /// <summary>
@@ -2286,6 +2316,7 @@ namespace Bonsai.Harp
     /// </summary>
     [DisplayName("TimestampedFirmwareVersionLowPayload")]
     [Description("Creates a timestamped message payload that specifies the minor version of the Harp core implemented by the device.")]
+    [Obsolete("The FirmwareVersionLow register is deprecated.")]
     public partial class CreateTimestampedFirmwareVersionLowPayload : CreateFirmwareVersionLowPayload
     {
         /// <summary>
@@ -2832,10 +2863,34 @@ namespace Bonsai.Harp
     public partial class CreateVersionPayload
     {
         /// <summary>
-        /// Gets or sets the value that stores the version of the device components.
+        /// Gets or sets a value that specifies the version of the Harp protocol implemented by the device.
         /// </summary>
-        [Description("The value that stores the version of the device components.")]
-        public VersionPayload Version { get; set; }
+        [Description("Specifies the version of the Harp protocol implemented by the device.")]
+        public string ProtocolVersion { get; set; } = "0.0.0";
+
+        /// <summary>
+        /// Gets or sets a value that specifies the version of the device firmware application.
+        /// </summary>
+        [Description("Specifies the version of the device firmware application.")]
+        public string FirmwareVersion { get; set; } = "0.0.0";
+
+        /// <summary>
+        /// Gets or sets a value that specifies the version of the device hardware.
+        /// </summary>
+        [Description("Specifies the version of the device hardware.")]
+        public string HardwareVersion { get; set; } = "0.0.0";
+
+        /// <summary>
+        /// Gets or sets a value that specifies the three-character code of the Harp microcontroller core targeted by the device firmware.
+        /// </summary>
+        [Description("Specifies the three-character code of the Harp microcontroller core targeted by the device firmware.")]
+        public string CoreId { get; set; } = "XXX";
+
+        /// <summary>
+        /// Gets or sets a value that specifies the SHA-1 hash value of the device interface schema file (device.yml).
+        /// </summary>
+        [Description("Specifies the SHA-1 hash value of the device interface schema file (device.yml).")]
+        public string InterfaceHash { get; set; } = BitConverter.ToString(new byte[20]);
 
         /// <summary>
         /// Creates a message payload for the Version register.
@@ -2843,7 +2898,13 @@ namespace Bonsai.Harp
         /// <returns>The created message payload value.</returns>
         public VersionPayload GetPayload()
         {
-            return Version;
+            VersionPayload value;
+            value.ProtocolVersion = SemVersion.Parse(ProtocolVersion);
+            value.FirmwareVersion = SemVersion.Parse(FirmwareVersion);
+            value.HardwareVersion = SemVersion.Parse(HardwareVersion);
+            value.CoreId = CoreId;
+            value.InterfaceHash = InterfaceHash;
+            return value;
         }
 
         /// <summary>
@@ -2952,9 +3013,9 @@ namespace Bonsai.Harp
         /// <param name="coreId">Specifies the three-character code of the Harp microcontroller core targeted by the device firmware.</param>
         /// <param name="interfaceHash"> Specifies the SHA-1 hash value of the device interface schema file (device.yml).</param>
         public VersionPayload(
-            SemanticVersion protocolVersion,
-            SemanticVersion firmwareVersion,
-            SemanticVersion hardwareVersion,
+            SemVersion protocolVersion,
+            SemVersion firmwareVersion,
+            SemVersion hardwareVersion,
             string coreId,
             string interfaceHash)
         {
@@ -2968,58 +3029,27 @@ namespace Bonsai.Harp
         /// <summary>
         /// Specifies the version of the Harp protocol implemented by the device.
         /// </summary>
-        public SemanticVersion ProtocolVersion;
+        public SemVersion ProtocolVersion;
+
         /// <summary>
         /// Specifies the version of the device firmware application.
         /// </summary>
-        public SemanticVersion FirmwareVersion;
+        public SemVersion FirmwareVersion;
+
         /// <summary>
         /// Specifies the version of the device hardware.
         /// </summary>
-        public SemanticVersion HardwareVersion;
+        public SemVersion HardwareVersion;
+
         /// <summary>
         /// Specifies the three-character code of the Harp microcontroller core targeted by the device firmware.
         /// </summary>
         public string CoreId;
+
         /// <summary>
         /// Specifies the SHA-1 hash value of the device interface schema file (device.yml).
         /// </summary>
         public string InterfaceHash;
-    }
-
-    /// <summary>
-    /// Represents a semantic version number with major, minor, and patch components.
-    /// </summary>
-    public struct SemanticVersion
-    {
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SemanticVersion"/> structure.
-        /// </summary>
-        /// <param name="major">The major version component.</param>
-        /// <param name="minor">The minor version component.</param>
-        /// <param name="patch">The patch version component.</param>
-        public SemanticVersion(
-            byte major,
-            byte minor,
-            byte patch)
-        {
-            Major = major;
-            Minor = minor;
-            Patch = patch;
-        }
-
-        /// <summary>
-        /// Specifies the major version component of the semantic version number.
-        /// </summary>
-        public byte Major;
-        /// <summary>
-        /// Specifies the minor version component of the semantic version number.
-        /// </summary>
-        public byte Minor;
-        /// <summary>
-        /// Specifies the patch version component of the semantic version number.
-        /// </summary>
-        public byte Patch;
     }
 
     /// <summary>

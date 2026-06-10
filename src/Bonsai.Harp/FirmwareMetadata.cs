@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Globalization;
 using System.Text.RegularExpressions;
+using Semver;
 
 namespace Bonsai.Harp
 {
@@ -10,7 +10,7 @@ namespace Bonsai.Harp
     /// </summary>
     public sealed class FirmwareMetadata : IEquatable<FirmwareMetadata>
     {
-        static readonly Regex MetadataRegex = new Regex("^(?<device>\\w+)-fw(?<firmware>\\d+\\.\\d+)-harp(?<core>\\d+\\.\\d+)-hw(?<hardware>(?:x|\\d+)\\.(?:x|\\d+))-ass(?<sequence>x|\\d+)(?:-preview(?<prerelease>\\d+))?$");
+        static readonly Regex MetadataRegex = new Regex("^(?<device>\\w+)-fw(?<firmware>\\d+\\.\\d+)-harp(?<protocol>\\d+\\.\\d+)-hw(?<hardware>(?:x|\\d+)\\.(?:x|\\d+))-ass(?<sequence>x|\\d+)(?:-preview(?<prerelease>\\d+))?$");
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FirmwareMetadata"/> class with the
@@ -18,24 +18,18 @@ namespace Bonsai.Harp
         /// </summary>
         /// <param name="deviceName">The unique identifier of the device type on which the firmware should be installed.</param>
         /// <param name="firmwareVersion">The version of the firmware contained in the device or hex file.</param>
-        /// <param name="coreVersion">The version of the Harp core implemented by the firmware.</param>
+        /// <param name="protocolVersion">The version of the Harp protocol implemented by the firmware.</param>
         /// <param name="hardwareVersion">The hardware version of the device, or range of hardware versions supported by the firmware.</param>
-        /// <param name="assemblyVersion">The board assembly version of the device, or range of assembly versions supported by the firmware.</param>
-        /// <param name="prereleaseVersion">The optional prerelease number, for preview versions of the firmware.</param>
         public FirmwareMetadata(
             string deviceName,
-            HarpVersion firmwareVersion,
-            HarpVersion coreVersion,
-            HarpVersion hardwareVersion,
-            int? assemblyVersion = default,
-            int? prereleaseVersion = default)
+            SemVersion firmwareVersion,
+            SemVersion protocolVersion,
+            SemVersion hardwareVersion)
         {
             DeviceName = deviceName ?? throw new ArgumentNullException(nameof(deviceName));
             FirmwareVersion = firmwareVersion ?? throw new ArgumentNullException(nameof(firmwareVersion));
-            CoreVersion = coreVersion ?? throw new ArgumentNullException(nameof(coreVersion));
+            ProtocolVersion = protocolVersion ?? throw new ArgumentNullException(nameof(protocolVersion));
             HardwareVersion = hardwareVersion ?? throw new ArgumentNullException(nameof(hardwareVersion));
-            AssemblyVersion = assemblyVersion;
-            PrereleaseVersion = prereleaseVersion;
         }
 
         /// <summary>
@@ -46,27 +40,17 @@ namespace Bonsai.Harp
         /// <summary>
         /// Gets the version of the firmware contained in the device or hex file.
         /// </summary>
-        public HarpVersion FirmwareVersion { get; }
+        public SemVersion FirmwareVersion { get; }
 
         /// <summary>
-        /// Gets the version of the Harp core implemented by the firmware.
+        /// Gets the version of the Harp protocol implemented by the firmware.
         /// </summary>
-        public HarpVersion CoreVersion { get; }
+        public SemVersion ProtocolVersion { get; }
 
         /// <summary>
         /// Gets the hardware version of the device, or range of hardware versions supported by the firmware.
         /// </summary>
-        public HarpVersion HardwareVersion { get; }
-
-        /// <summary>
-        /// Gets the board assembly version of the device, or range of assembly versions supported by the firmware.
-        /// </summary>
-        public int? AssemblyVersion { get; }
-
-        /// <summary>
-        /// Gets the optional prerelease number, for preview versions of the firmware.
-        /// </summary>
-        public int? PrereleaseVersion { get; }
+        public SemVersion HardwareVersion { get; }
 
         /// <summary>
         /// Returns whether the firmware supports the specified hardware version
@@ -74,16 +58,13 @@ namespace Bonsai.Harp
         /// </summary>
         /// <param name="deviceName">The identifier of the device to check for compatibility.</param>
         /// <param name="hardwareVersion">The hardware version to check for compatibility.</param>
-        /// <param name="assemblyVersion">The optional board assembly version to check for compatibility.</param>
         /// <returns>
-        /// <b>true</b> if the firmware supports the specified <paramref name="hardwareVersion"/> and
-        /// <paramref name="assemblyVersion"/>; otherwise, <b>false</b>.
+        /// <b>true</b> if the firmware supports the specified <paramref name="hardwareVersion"/>; otherwise, <b>false</b>.
         /// </returns>
-        public bool Supports(string deviceName, HarpVersion hardwareVersion, int assemblyVersion = default)
+        public bool Supports(string deviceName, SemVersion hardwareVersion)
         {
-            return DeviceName == deviceName &&
-                   HardwareVersion.Satisfies(hardwareVersion) &&
-                   (!AssemblyVersion.HasValue || AssemblyVersion.Value == assemblyVersion);
+            var range = SemVersionRange.Parse($"^{HardwareVersion}");
+            return DeviceName == deviceName && hardwareVersion.Satisfies(range);
         }
 
         /// <summary>
@@ -113,10 +94,8 @@ namespace Bonsai.Harp
             if (other is null) return false;
             return DeviceName == other.DeviceName &&
                    FirmwareVersion.Equals(other.FirmwareVersion) &&
-                   CoreVersion.Equals(other.CoreVersion) &&
-                   HardwareVersion.Equals(other.HardwareVersion) &&
-                   AssemblyVersion == other.AssemblyVersion &&
-                   PrereleaseVersion == other.PrereleaseVersion;
+                   ProtocolVersion.Equals(other.ProtocolVersion) &&
+                   HardwareVersion.Equals(other.HardwareVersion);
         }
 
         /// <summary>
@@ -128,12 +107,15 @@ namespace Bonsai.Harp
         /// </returns>
         public override int GetHashCode()
         {
-            return 17 * DeviceName.GetHashCode() +
-                   8971 * FirmwareVersion.GetHashCode() +
-                   2803 * CoreVersion.GetHashCode() +
-                   691 * HardwareVersion.GetHashCode() +
-                   1409 * AssemblyVersion.GetHashCode() +
-                   2333 * PrereleaseVersion.GetHashCode();
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + (DeviceName?.GetHashCode() ?? 0);
+                hash = hash * 23 + (FirmwareVersion?.GetHashCode() ?? 0);
+                hash = hash * 23 + (ProtocolVersion?.GetHashCode() ?? 0);
+                hash = hash * 23 + (HardwareVersion?.GetHashCode() ?? 0);
+                return hash;
+            }
         }
 
         /// <summary>
@@ -203,12 +185,10 @@ namespace Bonsai.Harp
             if (match.Success && match.Groups.Count == 7)
             {
                 var deviceName = match.Groups[1].Value;
-                var firmwareVersion = HarpVersion.Parse(match.Groups[2].Value);
-                var coreVersion = HarpVersion.Parse(match.Groups[3].Value);
-                var hardwareVersion = HarpVersion.Parse(match.Groups[4].Value);
-                var assemblyVersion = match.Groups[5].Value == HarpVersion.FloatingWildcard ? (int?)null : int.Parse(match.Groups[5].Value);
-                var prereleaseVersion = string.IsNullOrEmpty(match.Groups[6].Value) ? (int?)null : int.Parse(match.Groups[6].Value);
-                metadata = new FirmwareMetadata(deviceName, firmwareVersion, coreVersion, hardwareVersion, assemblyVersion, prereleaseVersion);
+                var firmwareVersion = SemVersion.Parse(match.Groups[2].Value);
+                var protocolVersion = SemVersion.Parse(match.Groups[3].Value);
+                var hardwareVersion = SemVersion.Parse(match.Groups[4].Value);
+                metadata = new FirmwareMetadata(deviceName, firmwareVersion, protocolVersion, hardwareVersion);
                 return true;
             }
             else
@@ -226,9 +206,7 @@ namespace Bonsai.Harp
         /// </returns>
         public override string ToString()
         {
-            var prerelease = PrereleaseVersion.HasValue ? $"-preview{PrereleaseVersion.Value}" : string.Empty;
-            var assemblyNumber = AssemblyVersion.HasValue ? AssemblyVersion.Value.ToString(CultureInfo.InvariantCulture) : HarpVersion.FloatingWildcard;
-            return $"{DeviceName}-fw{FirmwareVersion}-harp{CoreVersion}-hw{HardwareVersion}-ass{assemblyNumber}{prerelease}";
+            return $"{DeviceName}-fw{FirmwareVersion}-harp{ProtocolVersion}-hw{HardwareVersion}";
         }
     }
 }

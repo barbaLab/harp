@@ -61,7 +61,7 @@ namespace Bonsai.Harp
                     progress?.Report(10);
                     if (!forceUpdate)
                     {
-                        var hardwareVersion = await device.ReadHardwareVersionAsync().WithTimeout(FlushDelayMilliseconds);
+                        var hardwareVersion = (await device.ReadVersionAsync().WithTimeout(FlushDelayMilliseconds)).HardwareVersion;
                         var deviceName = await device.ReadDeviceNameAsync().WithTimeout(FlushDelayMilliseconds);
                         if (!firmware.Metadata.Supports(deviceName, hardwareVersion))
                         {

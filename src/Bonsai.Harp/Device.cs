@@ -8,6 +8,7 @@ using System.Xml.Serialization;
 using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
+using Semver;
 
 namespace Bonsai.Harp
 {
@@ -188,20 +189,14 @@ namespace Bonsai.Harp
                     visualIndicators,
                     heartbeat));
                 var cmdReadWhoAmI = HarpCommand.ReadUInt16(WhoAmI.Address);
-                var cmdReadMajorHardwareVersion = HarpCommand.ReadByte(HardwareVersionHigh.Address);
-                var cmdReadMinorHardwareVersion = HarpCommand.ReadByte(HardwareVersionLow.Address);
-                var cmdReadMajorFirmwareVersion = HarpCommand.ReadByte(FirmwareVersionHigh.Address);
-                var cmdReadMinorFirmwareVersion = HarpCommand.ReadByte(FirmwareVersionLow.Address);
-                var cmdReadTimestampSeconds = HarpCommand.ReadUInt32(TimestampSeconds.Address);
+                var cmdReadVersion = HarpCommand.ReadByte(Version.Address);
                 var cmdReadDeviceName = HarpCommand.ReadByte(DeviceName.Address);
                 var cmdReadSerialNumber = HarpCommand.ReadUInt16(SerialNumber.Address);
 
                 var whoAmI = 0;
                 var timestamp = 0u;
-                var hardwareVersionHigh = 0;
-                var hardwareVersionLow = 0;
-                var firmwareVersionHigh = 0;
-                var firmwareVersionLow = 0;
+                var hardwareVersion = default(SemVersion);
+                var firmwareVersion = default(SemVersion);
                 var serialNumber = default(ushort?);
                 var messageObserver = Observer.Create<HarpMessage>(
                     message =>
@@ -210,19 +205,16 @@ namespace Bonsai.Harp
                         {
                             case OperationControl.Address:
                                 transport.Write(cmdReadWhoAmI);
-                                transport.Write(cmdReadMajorHardwareVersion);
-                                transport.Write(cmdReadMinorHardwareVersion);
-                                transport.Write(cmdReadMajorFirmwareVersion);
-                                transport.Write(cmdReadMinorFirmwareVersion);
-                                transport.Write(cmdReadTimestampSeconds);
+                                transport.Write(cmdReadVersion);
                                 transport.Write(cmdReadSerialNumber);
                                 transport.Write(cmdReadDeviceName);
                                 break;
                             case WhoAmI.Address: whoAmI = WhoAmI.GetPayload(message); break;
-                            case HardwareVersionHigh.Address: hardwareVersionHigh = HardwareVersionHigh.GetPayload(message); break;
-                            case HardwareVersionLow.Address: hardwareVersionLow = HardwareVersionLow.GetPayload(message); break;
-                            case FirmwareVersionHigh.Address: firmwareVersionHigh = FirmwareVersionHigh.GetPayload(message); break;
-                            case FirmwareVersionLow.Address: firmwareVersionLow = FirmwareVersionLow.GetPayload(message); break;
+                            case Version.Address:
+                                var version = Version.GetPayload(message);
+                                hardwareVersion = version.HardwareVersion;
+                                firmwareVersion = version.FirmwareVersion;
+                                break;
                             case TimestampSeconds.Address: timestamp = TimestampSeconds.GetPayload(message); break;
                             case SerialNumber.Address: if (!message.Error) serialNumber = SerialNumber.GetPayload(message); break;
                             case DeviceName.Address:
@@ -231,8 +223,8 @@ namespace Bonsai.Harp
                                 Console.WriteLine("Serial Harp device.");
                                 if (!serialNumber.HasValue) Console.WriteLine($"WhoAmI: {whoAmI}");
                                 else Console.WriteLine($"WhoAmI: {whoAmI}-{serialNumber:x4}");
-                                Console.WriteLine($"Hw: {hardwareVersionHigh}.{hardwareVersionLow}");
-                                Console.WriteLine($"Fw: {firmwareVersionHigh}.{firmwareVersionLow}");
+                                Console.WriteLine($"Hw: {hardwareVersion?.ToString() ?? "unknown"}");
+                                Console.WriteLine($"Fw: {firmwareVersion?.ToString() ?? "unknown"}");
                                 Console.WriteLine($"Timestamp (s): {timestamp}");
                                 Console.WriteLine($"DeviceName: {deviceName}");
                                 Console.WriteLine();
@@ -350,7 +342,7 @@ namespace Bonsai.Harp
 
                     if (deviceFirmware != null)
                     {
-                        var firmwareVersion = await device.ReadFirmwareVersionAsync(cancellationToken);
+                        var firmwareVersion = (await device.ReadVersionAsync(cancellationToken)).FirmwareVersion;
                         if (firmwareVersion != deviceFirmware.FirmwareVersion)
                         {
                             throw new HarpException(string.Format(

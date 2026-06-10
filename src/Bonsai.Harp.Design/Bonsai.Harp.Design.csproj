@@ -11,6 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="Bonsai.Design" Version="2.9.0" />
+    <PackageReference Include="Semver" Version="3.0.0" />
   </ItemGroup>
 
   <ItemGroup>

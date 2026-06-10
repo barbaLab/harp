@@ -13,13 +13,6 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="CreateMessagePayload"/>
     /// <seealso cref="CreateWhoAmIPayload"/>
-    /// <seealso cref="CreateHardwareVersionHighPayload"/>
-    /// <seealso cref="CreateHardwareVersionLowPayload"/>
-    /// <seealso cref="CreateAssemblyVersionPayload"/>
-    /// <seealso cref="CreateCoreVersionHighPayload"/>
-    /// <seealso cref="CreateCoreVersionLowPayload"/>
-    /// <seealso cref="CreateFirmwareVersionHighPayload"/>
-    /// <seealso cref="CreateFirmwareVersionLowPayload"/>
     /// <seealso cref="CreateTimestampSecondsPayload"/>
     /// <seealso cref="CreateTimestampMicrosecondsPayload"/>
     /// <seealso cref="CreateOperationControlPayload"/>
@@ -32,13 +25,6 @@ namespace Bonsai.Harp
     /// <seealso cref="CreateVersionPayload"/>
     [XmlInclude(typeof(CreateMessagePayload))]
     [XmlInclude(typeof(CreateWhoAmIPayload))]
-    [XmlInclude(typeof(CreateHardwareVersionHighPayload))]
-    [XmlInclude(typeof(CreateHardwareVersionLowPayload))]
-    [XmlInclude(typeof(CreateAssemblyVersionPayload))]
-    [XmlInclude(typeof(CreateCoreVersionHighPayload))]
-    [XmlInclude(typeof(CreateCoreVersionLowPayload))]
-    [XmlInclude(typeof(CreateFirmwareVersionHighPayload))]
-    [XmlInclude(typeof(CreateFirmwareVersionLowPayload))]
     [XmlInclude(typeof(CreateTimestampSecondsPayload))]
     [XmlInclude(typeof(CreateTimestampMicrosecondsPayload))]
     [XmlInclude(typeof(CreateOperationControlPayload))]
@@ -50,13 +36,6 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(CreateTagPayload))]
     [XmlInclude(typeof(CreateVersionPayload))]
     [XmlInclude(typeof(CreateTimestampedWhoAmIPayload))]
-    [XmlInclude(typeof(CreateTimestampedHardwareVersionHighPayload))]
-    [XmlInclude(typeof(CreateTimestampedHardwareVersionLowPayload))]
-    [XmlInclude(typeof(CreateTimestampedAssemblyVersionPayload))]
-    [XmlInclude(typeof(CreateTimestampedCoreVersionHighPayload))]
-    [XmlInclude(typeof(CreateTimestampedCoreVersionLowPayload))]
-    [XmlInclude(typeof(CreateTimestampedFirmwareVersionHighPayload))]
-    [XmlInclude(typeof(CreateTimestampedFirmwareVersionLowPayload))]
     [XmlInclude(typeof(CreateTimestampedTimestampSecondsPayload))]
     [XmlInclude(typeof(CreateTimestampedTimestampMicrosecondsPayload))]
     [XmlInclude(typeof(CreateTimestampedOperationControlPayload))]

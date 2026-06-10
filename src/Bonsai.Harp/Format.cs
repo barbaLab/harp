@@ -13,13 +13,6 @@ namespace Bonsai.Harp
     /// </summary>
     /// <seealso cref="FormatMessagePayload"/>
     /// <seealso cref="WhoAmI"/>
-    /// <seealso cref="HardwareVersionHigh"/>
-    /// <seealso cref="HardwareVersionLow"/>
-    /// <seealso cref="AssemblyVersion"/>
-    /// <seealso cref="CoreVersionHigh"/>
-    /// <seealso cref="CoreVersionLow"/>
-    /// <seealso cref="FirmwareVersionHigh"/>
-    /// <seealso cref="FirmwareVersionLow"/>
     /// <seealso cref="TimestampSeconds"/>
     /// <seealso cref="TimestampMicroseconds"/>
     /// <seealso cref="OperationControl"/>
@@ -32,13 +25,6 @@ namespace Bonsai.Harp
     /// <seealso cref="Version"/>
     [XmlInclude(typeof(FormatMessagePayload))]
     [XmlInclude(typeof(WhoAmI))]
-    [XmlInclude(typeof(HardwareVersionHigh))]
-    [XmlInclude(typeof(HardwareVersionLow))]
-    [XmlInclude(typeof(AssemblyVersion))]
-    [XmlInclude(typeof(CoreVersionHigh))]
-    [XmlInclude(typeof(CoreVersionLow))]
-    [XmlInclude(typeof(FirmwareVersionHigh))]
-    [XmlInclude(typeof(FirmwareVersionLow))]
     [XmlInclude(typeof(TimestampSeconds))]
     [XmlInclude(typeof(TimestampMicroseconds))]
     [XmlInclude(typeof(OperationControl))]
