@@ -21,42 +21,49 @@ namespace Bonsai.Harp
         /// The address of the HW_VERSION_H register containing the major hardware
         /// version of the device. This field is read-only.
         /// </summary>
+        [Obsolete("The HardwareVersionHigh register is deprecated. Use the Version register instead.")]
         public const int HardwareVersionHigh = 1;
 
         /// <summary>
         /// The address of the HW_VERSION_L register containing the minor hardware
         /// version of the device. This field is read-only.
         /// </summary>
+        [Obsolete("The HardwareVersionLow register is deprecated. Use the Version register instead.")]
         public const int HardwareVersionLow = 2;
 
         /// <summary>
         /// The address of the ASSEMBLY_VERSION register containing the version of
         /// the assembled components in the device. This field is read-only.
         /// </summary>
+        [Obsolete("The AssemblyVersion register is deprecated.")]
         public const int AssemblyVersion = 3;
 
         /// <summary>
         /// The address of the HARP_VERSION_H register containing the major version
         /// of the Harp core used by the device. This field is read-only.
         /// </summary>
+        [Obsolete("The CoreVersionHigh register is deprecated. Use the Version register instead.")]
         public const int CoreVersionHigh = 4;
 
         /// <summary>
         /// The address of the HARP_VERSION_L register containing the minor version
         /// of the Harp core used by the device. This field is read-only.
         /// </summary>
+        [Obsolete("The CoreVersionLow register is deprecated. Use the Version register instead.")]
         public const int CoreVersionLow = 5;
 
         /// <summary>
         /// The address of the FW_VERSION_H register containing the major firmware
         /// version installed in the device. This field is read-only.
         /// </summary>
+        [Obsolete("The FirmwareVersionHigh register is deprecated. Use the Version register instead.")]
         public const int FirmwareVersionHigh = 6;
 
         /// <summary>
         /// The address of the FW_VERSION_L register containing the minor firmware
         /// version installed in the device. This field is read-only.
         /// </summary>
+        [Obsolete("The FirmwareVersionLow register is deprecated. Use the Version register instead.")]
         public const int FirmwareVersionLow = 7;
 
         /// <summary>
