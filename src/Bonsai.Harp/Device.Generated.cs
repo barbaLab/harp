@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Text;
+using System.Net;
 using Semver;
 
 namespace Bonsai.Harp
@@ -25,7 +26,11 @@ namespace Bonsai.Harp
             { 14, typeof(ClockConfiguration) },
             { 16, typeof(Uid) },
             { 17, typeof(Tag) },
-            { 19, typeof(Version) }
+            { 19, typeof(Version) },
+            { 32, typeof(NetworkSsid) },
+            { 33, typeof(NetworkPassword) },
+            { 34, typeof(NetworkControllerEndpoint) },
+            { 35, typeof(NetworkConfiguration) },
         };
     }
 
@@ -1703,7 +1708,7 @@ namespace Bonsai.Harp
         /// Returns a Harp message for the <see cref="Tag"/> register.
         /// </summary>
         /// <param name="messageType">The type of the Harp message.</param>
-        /// <param name="value">The value to be stored in the register.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
         /// <returns>
         /// A <see cref="HarpMessage"/> object for the <see cref="Tag"/> register
         /// with the specified message type and payload.
@@ -1812,8 +1817,8 @@ namespace Bonsai.Harp
         /// <summary>
         /// Returns the payload data for <see cref="Version"/> register messages.
         /// </summary>
-        /// <param name="message"></param>
-        /// <returns></returns>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
         public static VersionPayload GetPayload(HarpMessage message)
         {
             return ParsePayload(message.GetPayload());
@@ -1882,6 +1887,475 @@ namespace Bonsai.Harp
         public static Timestamped<VersionPayload> GetPayload(HarpMessage message)
         {
             return Version.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
+    /// Represents a register that stores the SSID of the Wi-Fi network the device is connected to.
+    /// </summary>
+    [Description("Stores the SSID of the Wi-Fi network the device is connected to.")]
+    public partial class NetworkSsid
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkSsid"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 32;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="NetworkSsid"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="NetworkSsid"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 32;
+
+        static string ParsePayload(ArraySegment<byte> payload)
+        {
+            var count = Array.IndexOf(payload.Array, (byte)0, payload.Offset, payload.Count) - payload.Offset;
+            return Encoding.ASCII.GetString(payload.Array, payload.Offset, count);
+        }
+
+        static ArraySegment<byte> FormatPayload(string value)
+        {
+            var payload = new byte[RegisterLength];
+            if (!string.IsNullOrEmpty(value))
+            {
+                Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            }
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="NetworkSsid"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static string GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="NetworkSsid"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="NetworkSsid"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkSsid"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="NetworkSsid"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object representing the <see cref="NetworkSsid"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// NetworkSsid register.
+    /// </summary>
+    /// <seealso cref="NetworkSsid"/>
+    [Description("Filters and selects timestamped messages from the NetworkSsid register.")]
+    public partial class TimestampedNetworkSsid
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkSsid"/> register. This field is constant.
+        /// </summary>
+        public const int Address = NetworkSsid.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="NetworkSsid"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetPayload(HarpMessage message)
+        {
+            return NetworkSsid.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
+    /// Represents a register that stores the password of the Wi-Fi network the device is connected to.
+    /// </summary>
+    [Description("Stores the password of the Wi-Fi network the device is connected to.")]
+    public partial class NetworkPassword
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkPassword"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 33;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="NetworkPassword"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="NetworkPassword"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 64;
+
+        static string ParsePayload(ArraySegment<byte> payload)
+        {
+            var count = Array.IndexOf(payload.Array, (byte)0, payload.Offset, payload.Count) - payload.Offset;
+            return Encoding.ASCII.GetString(payload.Array, payload.Offset, count);
+        }
+
+        static ArraySegment<byte> FormatPayload(string value)
+        {
+            var payload = new byte[RegisterLength];
+            if (!string.IsNullOrEmpty(value))
+            {
+                Encoding.ASCII.GetBytes(value, 0, Math.Min(value.Length, RegisterLength - 1), payload, 0);
+            }
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="NetworkPassword"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static string GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="NetworkPassword"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="NetworkPassword"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkPassword"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="NetworkPassword"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkPassword"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, string value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// NetworkPassword register.
+    /// </summary>
+    /// <seealso cref="NetworkPassword"/>
+    [Description("Filters and selects timestamped messages from the NetworkPassword register.")]
+    public partial class TimestampedNetworkPassword
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkPassword"/> register. This field is constant.
+        /// </summary>
+        public const int Address = NetworkPassword.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="NetworkPassword"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<string> GetPayload(HarpMessage message)
+        {
+            return NetworkPassword.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
+    /// Represents a register that stores a network controller TCP endpoint (ip + port).
+    /// </summary>
+    [Description("Stores a network controller TCP endpoint (ip + port).")]
+    public partial class NetworkControllerEndpoint
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkControllerEndpoint"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 34;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="NetworkControllerEndpoint"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="NetworkControllerEndpoint"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 18;
+
+        static NetworkControllerEndpointPayload ParsePayload(ArraySegment<byte> payload)
+        {
+            var count = Array.IndexOf(payload.Array, (byte)0, payload.Offset, payload.Count) - payload.Offset;
+            int ipBytesLength = IPAddress.Any.MapToIPv6().GetAddressBytes().Length;
+            byte[] ipBytes = new byte[ipBytesLength];
+            Array.Copy(payload.Array, payload.Offset, ipBytes, 0, ipBytesLength);
+            IPAddress ip = new IPAddress(ipBytes);
+            UInt16 port = BitConverter.ToUInt16(payload.Array, payload.Offset + ipBytesLength);
+            return new NetworkControllerEndpointPayload(ip, port);
+        }
+
+        static ArraySegment<byte> FormatPayload(NetworkControllerEndpointPayload value)
+        {
+            var payload = new byte[RegisterLength];
+            var ipBytes = value.Ip.GetAddressBytes();
+            Array.Copy(ipBytes, 0, payload, 0, ipBytes.Length);
+            BitConverter.GetBytes(value.Port).CopyTo(payload, ipBytes.Length);
+            return new ArraySegment<byte>(payload);
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="NetworkControllerEndpoint"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static NetworkControllerEndpointPayload GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayload());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="NetworkControllerEndpoint"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<NetworkControllerEndpointPayload> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayload();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="NetworkControllerEndpoint"/> register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkControllerEndpoint"/> register
+        /// with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, NetworkControllerEndpointPayload value)
+        {
+            return HarpMessage.FromPayload(Address, messageType, PayloadType.U8, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="NetworkControllerEndpoint"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkControllerEndpoint"/> register
+        /// with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, NetworkControllerEndpointPayload value)
+        {
+            return HarpMessage.FromPayload(Address, timestamp, messageType, PayloadType.U8, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// NetworkControllerEndpoint register.
+    /// </summary>
+    [DisplayName("TimestampedNetworkControllerEndpointPayload")]
+    [Description("Filters and selects timestamped messages from the NetworkControllerEndpoint register.")]
+    public partial class TimestampedNetworkControllerEndpoint
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkControllerEndpoint"/> register. This field is constant.
+        /// </summary>
+        public const int Address = NetworkControllerEndpoint.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="NetworkControllerEndpoint"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<NetworkControllerEndpointPayload> GetPayload(HarpMessage message)
+        {
+            return NetworkControllerEndpoint.GetTimestampedPayload(message);
+        }
+    }
+
+    /// <summary>
+    /// Represents a register that stores the network configuration of the device.
+    /// </summary>
+    [Description("Stores the network configuration of the device.")]
+    public partial class NetworkConfiguration
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkConfiguration"/> register. This field is constant.
+        /// </summary>
+        public const int Address = 35;
+
+        /// <summary>
+        /// Represents the payload type of the <see cref="NetworkConfiguration"/> register. This field is constant.
+        /// </summary>
+        public const PayloadType RegisterType = PayloadType.U8;
+
+        /// <summary>
+        /// Represents the length of the <see cref="NetworkConfiguration"/> register. This field is constant.
+        /// </summary>
+        public const int RegisterLength = 1;
+
+        static NetworkConfigurationPayload ParsePayload(byte payload)
+        {
+            NetworkConfigurationPayload result;
+            result.WiFi = (EnableFlag)(byte)(payload & 0x1);
+            result.Tcp = (EnableFlag)(byte)((payload & 0x2) >> 1);
+            result.ConfigurationValid = (byte)(payload & 0x4) != 0;
+            result.WiFiStatus = (byte)(payload & 0x8) != 0;
+            result.WiFiConnected = (byte)(payload & 0x10) != 0;
+            result.TcpConnected = (byte)(payload & 0x20) != 0;
+            result.Operation = (NetworkConfigurationOperationFlags)(byte)((payload & 0xC0) >> 6);
+            return result;
+        }
+
+        static byte FormatPayload(NetworkConfigurationPayload value)
+        {
+            byte result;
+            result = (byte)((byte)value.WiFi & 0x1);
+            result |= (byte)(((byte)value.Tcp & 0x1) << 1);
+            result |= value.ConfigurationValid ? (byte)0x4 : (byte)0;
+            result |= value.WiFiStatus         ? (byte)0x8 : (byte)0;
+            result |= value.WiFiConnected      ? (byte)0x10 : (byte)0;
+            result |= value.TcpConnected       ? (byte)0x20 : (byte)0;
+            result |= (byte)((byte)value.Operation & 0xC0);
+            return result;
+        }
+
+        /// <summary>
+        /// Returns the payload data for <see cref="NetworkConfiguration"/>
+        /// register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the message payload.</returns>
+        public static NetworkConfigurationPayload GetPayload(HarpMessage message)
+        {
+            return ParsePayload(message.GetPayloadByte());
+        }
+
+        /// <summary>
+        /// Returns the timestamped payload data for <see cref="NetworkConfiguration"/>
+        /// register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<NetworkConfigurationPayload> GetTimestampedPayload(HarpMessage message)
+        {
+            var payload = message.GetTimestampedPayloadByte();
+            return Timestamped.Create(ParsePayload(payload.Value), payload.Seconds);
+        }
+
+        /// <summary>
+        /// Returns a Harp message for the <see cref="NetworkConfiguration"/>
+        /// register.
+        /// </summary>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkConfiguration"/>
+        /// register with the specified message type and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(MessageType messageType, NetworkConfigurationPayload value)
+        {
+            return HarpMessage.FromByte(Address, messageType, FormatPayload(value));
+        }
+
+        /// <summary>
+        /// Returns a timestamped Harp message for the <see cref="NetworkConfiguration"/>
+        /// register.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">The type of the Harp message.</param>
+        /// <param name="value">The value to be stored in the message payload.</param>
+        /// <returns>
+        /// A <see cref="HarpMessage"/> object for the <see cref="NetworkConfiguration"/>
+        /// register with the specified message type, timestamp, and payload.
+        /// </returns>
+        public static HarpMessage FromPayload(double timestamp, MessageType messageType, NetworkConfigurationPayload value)
+        {
+            return HarpMessage.FromByte(Address, timestamp, messageType, FormatPayload(value));
+        }
+    }
+
+    /// <summary>
+    /// Provides methods for manipulating timestamped messages from the
+    /// NetworkConfiguration register.
+    /// </summary>
+    /// <seealso cref="NetworkConfiguration"/>
+    [Description("Filters and selects timestamped messages from the NetworkConfiguration register.")]
+    public partial class TimestampedNetworkConfiguration
+    {
+        /// <summary>
+        /// Represents the address of the <see cref="NetworkConfiguration"/> register. This field is constant.
+        /// </summary>
+        public const int Address = NetworkConfiguration.Address;
+
+        /// <summary>
+        /// Returns timestamped payload data for <see cref="NetworkConfiguration"/> register messages.
+        /// </summary>
+        /// <param name="message">A <see cref="HarpMessage"/> object representing the register message.</param>
+        /// <returns>A value representing the timestamped message payload.</returns>
+        public static Timestamped<NetworkConfigurationPayload> GetPayload(HarpMessage message)
+        {
+            return NetworkConfiguration.GetTimestampedPayload(message);
         }
     }
 
@@ -2939,6 +3413,284 @@ namespace Bonsai.Harp
     }
 
     /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the network SSID.
+    /// </summary>
+    [DisplayName("NetworkSsidPayload")]
+    [Description("Creates a message payload that stores the network SSID.")]
+    public partial class CreateNetworkSsidPayload
+    {
+        /// <summary>
+        /// Gets or sets the value that stores the network SSID.
+        /// </summary>
+        [Description("The value that stores the network SSID.")]
+        public string NetworkSsid { get; set; }
+
+        /// <summary>
+        /// Creates a message payload for the NetworkSsid register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public string GetPayload()
+        {
+            return NetworkSsid;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the network SSID.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the NetworkSsid register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkSsid.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the network SSID.
+    /// </summary>
+    [DisplayName("TimestampedNetworkSsidPayload")]
+    [Description("Creates a timestamped message payload that stores the network SSID.")]
+    public partial class CreateTimestampedNetworkSsidPayload : CreateNetworkSsidPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the network SSID.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the NetworkSsid register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkSsid.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the network password.
+    /// </summary>
+    [DisplayName("NetworkPasswordPayload")]
+    [Description("Creates a message payload that stores the network password.")]
+    public partial class CreateNetworkPasswordPayload
+    {
+        /// <summary>
+        /// Gets or sets the value that stores the network password.
+        /// </summary>
+        [Description("The value that stores the network password.")]
+        [PasswordPropertyText(true)]
+        public string NetworkPassword { get; set; }
+
+        /// <summary>
+        /// Creates a message payload for the NetworkPassword register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public string GetPayload()
+        {
+            return NetworkPassword;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the network password.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the NetworkPassword register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkPassword.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the network password.
+    /// </summary>
+    [DisplayName("TimestampedNetworkPasswordPayload")]
+    [Description("Creates a timestamped message payload that stores the network password.")]
+    public partial class CreateTimestampedNetworkPasswordPayload : CreateNetworkPasswordPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the network password.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the NetworkPassword register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkPassword.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the network controller TCP endpoint (ip + port).
+    /// </summary>
+    [DisplayName("NetworkControllerEndpointPayload")]
+    [Description("Creates a message payload that stores the network controller TCP endpoint (ip + port).")]
+    public partial class CreateNetworkControllerEndpointPayload
+    {
+        /// <summary>
+        /// Gets or sets the IP address of the network controller.
+        /// </summary>
+        [Description("Specifies the IP address of the network controller. Both IPv4 and IPv6 addresses are supported. IPv4 addresses are automatically mapped to IPv6.")]
+        public string Ip { get; set; } = "0.0.0.0";
+
+        /// <summary>
+        /// Gets or sets the value that specifies the port of the network controller.
+        /// </summary>
+        [Description("Specifies the port of the network controller.")]
+        public UInt16 Port { get; set; } = 0;
+
+        /// <summary>
+        /// Creates a message payload for the NetworkControllerEndpoint register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public NetworkControllerEndpointPayload GetPayload()
+        {
+            NetworkControllerEndpointPayload value;
+            value.Ip = IPAddress.Parse(Ip).MapToIPv6();
+            value.Port = Port;
+            return value;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the network controller TCP endpoint (ip + port).
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the NetworkControllerEndpoint register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkControllerEndpoint.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the network controller TCP endpoint (ip + port).
+    /// </summary>
+    [DisplayName("TimestampedNetworkControllerEndpointPayload")]
+    [Description("Creates a timestamped message payload that stores the network controller TCP endpoint.")]
+    public partial class CreateTimestampedNetworkControllerEndpointPayload : CreateNetworkControllerEndpointPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the network controller TCP endpoint.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the NetworkControllerEndpoint register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkControllerEndpoint.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a message payload
+    /// that stores the network configuration of the device.
+    /// </summary>
+    [DisplayName("NetworkConfigurationPayload")]
+    [Description("Creates a message payload that stores the network configuration of the device.")]
+    public partial class CreateNetworkConfigurationPayload
+    {
+        /// <summary>
+        /// Gets or sets a value that specifies whether WiFi is enabled.
+        /// </summary>
+        [Description("Specifies whether WiFi is enabled.")]
+        public EnableFlag WiFi { get; set; } = EnableFlag.Enabled;
+
+        /// <summary>
+        /// Gets or sets a value that specifies whether TCP is enabled.
+        /// </summary>
+        [Description("Specifies whether TCP is enabled.")]
+        public EnableFlag Tcp { get; set; } = EnableFlag.Enabled;
+
+        /// <summary>
+        /// Gets the value that specifies whether the network configuration is valid.
+        /// </summary>
+        [Category("Status")]
+        [Description("Specifies whether the network configuration is valid.")]
+        [ReadOnly(true)]
+        public bool ConfigurationValid { get; } = false;
+
+        /// <summary>
+        /// Gets the value that specifies whether the WiFi connection is OK.
+        /// </summary>
+        [Category("Status")]
+        [Description("Specifies whether the WiFi connection is OK.")]
+        [ReadOnly(true)]
+        public bool WiFiStatus { get; } = false;
+
+        /// <summary>
+        /// Gets the value that specifies whether the IP address is OK.
+        /// </summary>
+        [Category("Status")]
+        [Description("Specifies whether the IP address is OK.")]
+        [ReadOnly(true)]
+        public bool WiFiConnected { get; } = false;
+
+        /// <summary>
+        /// Gets the value that specifies whether TCP is connected.
+        /// </summary>
+        [Category("Status")]
+        [Description("Specifies whether TCP is connected.")]
+        [ReadOnly(true)]
+        public bool TcpConnected { get; } = false;
+
+        /// <summary>
+        /// Gets or sets a value that specifies whether to apply or clear the network configuration.
+        /// </summary>
+        [Description("Specifies whether to apply or clear the network configuration.")]
+         public NetworkConfigurationOperationFlags Operation { get; set; } = NetworkConfigurationOperationFlags.None;
+
+        /// <summary>
+        /// Creates a message payload for the NetworkConfiguration register.
+        /// </summary>
+        /// <returns>The created message payload value.</returns>
+        public NetworkConfigurationPayload GetPayload()
+        {
+            NetworkConfigurationPayload value;
+            value.WiFi = WiFi;
+            value.Tcp = Tcp;
+            value.ConfigurationValid = ConfigurationValid;
+            value.WiFiStatus = WiFiStatus;
+            value.WiFiConnected = WiFiConnected;
+            value.TcpConnected = TcpConnected;
+            value.Operation = Operation;
+            return value;
+        }
+
+        /// <summary>
+        /// Creates a message that stores the network configuration of the device.
+        /// </summary>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new message for the NetworkConfiguration register.</returns>
+        public HarpMessage GetMessage(MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkConfiguration.FromPayload(messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
+    /// Represents an operator that creates a timestamped message payload
+    /// that stores the network configuration of the device.
+    /// </summary>
+    [DisplayName("TimestampedNetworkConfigurationPayload")]
+    [Description("Creates a timestamped message payload that stores the network configuration of the device.")]
+    public partial class CreateTimestampedNetworkConfigurationPayload : CreateNetworkConfigurationPayload
+    {
+        /// <summary>
+        /// Creates a timestamped message that stores the network configuration of the device.
+        /// </summary>
+        /// <param name="timestamp">The timestamp of the message payload, in seconds.</param>
+        /// <param name="messageType">Specifies the type of the created message.</param>
+        /// <returns>A new timestamped message for the NetworkConfiguration register.</returns>
+        public HarpMessage GetMessage(double timestamp, MessageType messageType)
+        {
+            return Bonsai.Harp.NetworkConfiguration.FromPayload(timestamp, messageType, GetPayload());
+        }
+    }
+
+    /// <summary>
     /// Represents the payload of the OperationControl register.
     /// </summary>
     public struct OperationControlPayload
@@ -3050,6 +3802,103 @@ namespace Bonsai.Harp
         /// Specifies the SHA-1 hash value of the device interface schema file (device.yml).
         /// </summary>
         public string InterfaceHash;
+    }
+
+    /// <summary>
+    /// Represents the payload of the NetworkControllerEndpoint register.
+    /// </summary>
+    public struct NetworkControllerEndpointPayload
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetworkControllerEndpointPayload"/> structure.
+        /// </summary>
+        /// <param name="ip">Specifies the IP address of the network controller.</param>
+        /// <param name="port">Specifies the port of the network controller.</param>
+        public NetworkControllerEndpointPayload(IPAddress ip, UInt16 port)
+        {
+            Ip = ip;
+            Port = port;
+        }
+
+        /// <summary>
+        /// Specifies the IP address of the controller TCP server.
+        /// </summary>
+        public IPAddress Ip;
+
+        /// <summary>
+        /// Specifies the port of the controller TCP server.
+        /// </summary>
+        public UInt16 Port;
+    }
+
+    /// <summary>
+    /// Represents the payload of the NetworkConfiguration register.
+    /// </summary>
+    public struct NetworkConfigurationPayload
+    {
+        /// <summary>
+        /// Initializes a new instance of the <see cref="NetworkConfigurationPayload"/> structure.
+        /// </summary>
+        /// <param name="wiFi">Specifies whether WiFi is enabled.</param>
+        /// <param name="tcp">Specifies whether TCP is enabled.</param>
+        /// <param name="configurationValid">Specifies whether the network configuration is valid.</param>
+        /// <param name="wiFiStatus">Specifies whether the WiFi connection is OK.</param>
+        /// <param name="wiFiConnected">Specifies whether the WiFi connection is connected.</param>
+        /// <param name="tcpConnected">Specifies whether TCP is connected.</param>
+        /// <param name="operation">Specifies whether to apply or clear the network configuration.</param>
+        public NetworkConfigurationPayload(
+            EnableFlag wiFi,
+            EnableFlag tcp,
+            bool configurationValid,
+            bool wiFiStatus,
+            bool wiFiConnected,
+            bool tcpConnected,
+            NetworkConfigurationOperationFlags operation
+        )
+        {
+            WiFi = wiFi;
+            Tcp = tcp;
+            ConfigurationValid = configurationValid;
+            WiFiStatus = wiFiStatus;
+            WiFiConnected = wiFiConnected;
+            TcpConnected = tcpConnected;
+            Operation = operation;
+        }
+
+        /// <summary>
+        /// Specifies whether WiFi is enabled.
+        /// </summary>
+        public EnableFlag WiFi;
+
+        /// <summary>
+        /// Specifies whether TCP is enabled.
+        /// </summary>
+        public EnableFlag Tcp;
+
+        /// <summary>
+        /// Specifies whether the network configuration is valid.
+        /// </summary>
+        public bool ConfigurationValid;
+
+        /// <summary>
+        /// Specifies whether the WiFi connection is OK.
+        /// </summary>
+        public bool WiFiStatus;
+
+        /// <summary>
+        /// Specifies whether the IP address is OK.
+        /// </summary>
+        public bool WiFiConnected;
+
+        /// <summary>
+        /// Specifies whether TCP is connected.
+        /// </summary>
+        public bool TcpConnected;
+
+        /// <summary>
+        /// Specifies whether to apply or clear the network configuration.
+        /// </summary>
+        public NetworkConfigurationOperationFlags Operation;
     }
 
     /// <summary>
@@ -3181,5 +4030,27 @@ namespace Bonsai.Harp
         [EditorBrowsable(EditorBrowsableState.Never)]
         Enable = Enabled
 #pragma warning restore CS1591 // Missing XML comment for publicly visible type or member
+    }
+
+    /// <summary>
+    /// Specifies the operation flags for the NetworkConfiguration register.
+    /// </summary>
+    [Flags]
+    public enum NetworkConfigurationOperationFlags : byte
+    {
+        /// <summary>
+        /// No operation is performed on the network configuration.
+        /// </summary>
+        None = 0x0,
+
+        /// <summary>
+        /// The device will apply the current network configuration.
+        /// </summary>
+        Apply = 0x40,
+
+        /// <summary>
+        /// The device will clear the current network configuration.
+        /// </summary>
+        Clear = 0x80
     }
 }

@@ -24,6 +24,10 @@ namespace Bonsai.Harp
     /// <seealso cref="Uid"/>
     /// <seealso cref="Tag"/>
     /// <seealso cref="Version"/>
+    /// <seealso cref="NetworkSsid"/>
+    /// <seealso cref="NetworkPassword"/>
+    /// <seealso cref="NetworkControllerEndpoint"/>
+    /// <seealso cref="NetworkConfiguration"/>
     [XmlInclude(typeof(ParseMessagePayload))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(TimestampSeconds))]
@@ -36,6 +40,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(Uid))]
     [XmlInclude(typeof(Tag))]
     [XmlInclude(typeof(Version))]
+    [XmlInclude(typeof(NetworkSsid))]
+    [XmlInclude(typeof(NetworkPassword))]
+    [XmlInclude(typeof(NetworkControllerEndpoint))]
+    [XmlInclude(typeof(NetworkConfiguration))]
     [XmlInclude(typeof(TimestampedWhoAmI))]
     [XmlInclude(typeof(TimestampedTimestampSeconds))]
     [XmlInclude(typeof(TimestampedTimestampMicroseconds))]
@@ -47,6 +55,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(TimestampedUid))]
     [XmlInclude(typeof(TimestampedTag))]
     [XmlInclude(typeof(TimestampedVersion))]
+    [XmlInclude(typeof(TimestampedNetworkSsid))]
+    [XmlInclude(typeof(TimestampedNetworkPassword))]
+    [XmlInclude(typeof(TimestampedNetworkControllerEndpoint))]
+    [XmlInclude(typeof(TimestampedNetworkConfiguration))]
     [Description("Filters and selects standard Harp messages reported by the device.")]
     public class Parse : ParseBuilder, INamedElement
     {

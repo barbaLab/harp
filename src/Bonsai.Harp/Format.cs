@@ -23,6 +23,10 @@ namespace Bonsai.Harp
     /// <seealso cref="Uid"/>
     /// <seealso cref="Tag"/>
     /// <seealso cref="Version"/>
+    /// <seealso cref="NetworkSsid"/>
+    /// <seealso cref="NetworkPassword"/>
+    /// <seealso cref="NetworkControllerEndpoint"/>
+    /// <seealso cref="NetworkConfiguration"/>
     [XmlInclude(typeof(FormatMessagePayload))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(TimestampSeconds))]
@@ -35,6 +39,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(Uid))]
     [XmlInclude(typeof(Tag))]
     [XmlInclude(typeof(Version))]
+    [XmlInclude(typeof(NetworkSsid))]
+    [XmlInclude(typeof(NetworkPassword))]
+    [XmlInclude(typeof(NetworkControllerEndpoint))]
+    [XmlInclude(typeof(NetworkConfiguration))]
     [Description("Formats a sequence of values as standard Harp device messages.")]
     public class Format : FormatBuilder, INamedElement
     {

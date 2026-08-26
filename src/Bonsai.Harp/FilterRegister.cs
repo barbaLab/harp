@@ -24,6 +24,10 @@ namespace Bonsai.Harp
     /// <seealso cref="Uid"/>
     /// <seealso cref="Tag"/>
     /// <seealso cref="Version"/>
+    /// <seealso cref="NetworkSsid"/>
+    /// <seealso cref="NetworkPassword"/>
+    /// <seealso cref="NetworkControllerEndpoint"/>
+    /// <seealso cref="NetworkConfiguration"/>
     [XmlInclude(typeof(FilterRegisterAddress))]
     [XmlInclude(typeof(WhoAmI))]
     [XmlInclude(typeof(TimestampSeconds))]
@@ -36,6 +40,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(Uid))]
     [XmlInclude(typeof(Tag))]
     [XmlInclude(typeof(Version))]
+    [XmlInclude(typeof(NetworkSsid))]
+    [XmlInclude(typeof(NetworkPassword))]
+    [XmlInclude(typeof(NetworkControllerEndpoint))]
+    [XmlInclude(typeof(NetworkConfiguration))]
     [Description("Filters the sequence for Harp messages matching the specified register address.")]
     public class FilterRegister : FilterRegisterBuilder, INamedElement
     {

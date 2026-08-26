@@ -126,6 +126,28 @@ namespace Bonsai.Harp
         public const int Version = 19;
 
         /// <summary>
+        /// The address of the NET_SSID register containing the network SSID for Wi-Fi enabled devices.
+        /// </summary>
+        public const int NetworkSsid = 32;
+
+        /// <summary>
+        /// The address of the NET_PASSWORD register containing the network password for Wi-Fi enabled devices.
+        /// Reading this register returns an all-zero string for security reasons.
+        /// </summary>
+        public const int NetworkPassword = 33;
+
+        /// <summary>
+        /// The address of the NET_CONTROLLER_ENDPOINT register containing the TCP server IP address and port for Wi-Fi enabled devices.
+        /// </summary>
+        public const int NetworkControllerEndpoint = 34;
+
+        /// <summary>
+        /// The address of the NET_CONFIG register containing the enable flags, status bits,
+        /// and apply/clear commands for Wi-Fi enabled devices.
+        /// </summary>
+        public const int NetworkConfiguration = 35;
+
+        /// <summary>
         /// The payload type of the WHO_AM_I register. This field is read-only.
         /// </summary>
         public const PayloadType WhoAmIPayload = PayloadType.U16;
@@ -214,5 +236,25 @@ namespace Bonsai.Harp
         /// The payload type of the VERSION register. This field is read-only.
         /// </summary>
         public const PayloadType VersionPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the NET_SSID register.
+        /// </summary>
+        public const PayloadType NetworkSsidPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the NET_PASSWORD register.
+        /// </summary>
+        public const PayloadType NetworkPasswordPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the NET_CONTROLLER_ENDPOINT register.
+        /// </summary>
+        public const PayloadType NetworkControllerEndpointPayload = PayloadType.U8;
+
+        /// <summary>
+        /// The payload type of the NET_CONFIG register.
+        /// </summary>
+        public const PayloadType NetworkConfigurationPayload = PayloadType.U8;
     }
 }

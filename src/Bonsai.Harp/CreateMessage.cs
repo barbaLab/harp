@@ -23,6 +23,10 @@ namespace Bonsai.Harp
     /// <seealso cref="CreateUidPayload"/>
     /// <seealso cref="CreateTagPayload"/>
     /// <seealso cref="CreateVersionPayload"/>
+    /// <seealso cref="CreateNetworkSsidPayload"/>
+    /// <seealso cref="CreateNetworkPasswordPayload"/>
+    /// <seealso cref="CreateNetworkControllerEndpointPayload"/>
+    /// <seealso cref="CreateNetworkConfigurationPayload"/>
     [XmlInclude(typeof(CreateMessagePayload))]
     [XmlInclude(typeof(CreateWhoAmIPayload))]
     [XmlInclude(typeof(CreateTimestampSecondsPayload))]
@@ -35,6 +39,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(CreateUidPayload))]
     [XmlInclude(typeof(CreateTagPayload))]
     [XmlInclude(typeof(CreateVersionPayload))]
+    [XmlInclude(typeof(CreateNetworkSsidPayload))]
+    [XmlInclude(typeof(CreateNetworkPasswordPayload))]
+    [XmlInclude(typeof(CreateNetworkControllerEndpointPayload))]
+    [XmlInclude(typeof(CreateNetworkConfigurationPayload))]
     [XmlInclude(typeof(CreateTimestampedWhoAmIPayload))]
     [XmlInclude(typeof(CreateTimestampedTimestampSecondsPayload))]
     [XmlInclude(typeof(CreateTimestampedTimestampMicrosecondsPayload))]
@@ -46,6 +54,10 @@ namespace Bonsai.Harp
     [XmlInclude(typeof(CreateTimestampedUidPayload))]
     [XmlInclude(typeof(CreateTimestampedTagPayload))]
     [XmlInclude(typeof(CreateTimestampedVersionPayload))]
+    [XmlInclude(typeof(CreateTimestampedNetworkSsidPayload))]
+    [XmlInclude(typeof(CreateTimestampedNetworkPasswordPayload))]
+    [XmlInclude(typeof(CreateTimestampedNetworkControllerEndpointPayload))]
+    [XmlInclude(typeof(CreateTimestampedNetworkConfigurationPayload))]
     [Description("Creates a sequence of standard message payloads for Harp devices.")]
     public class CreateMessage : CreateMessageBuilder, INamedElement
     {
